@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AltoQi · ISO 27001 Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #0b0f1a;
+  --bg2:      #111827;
+  --bg3:      #1a2236;
+  --border:   #1e2d4a;
+  --border2:  #253352;
+  --text:     #e2e8f0;
+  --text2:    #8fa3c0;
+  --text3:    #4d6482;
+  --accent:   #3b82f6;
+  --accent2:  #06b6d4;
+  --green:    #10b981;
+  --yellow:   #f59e0b;
+  --red:      #ef4444;
+  --green-bg: rgba(16,185,129,.12);
+  --yellow-bg:rgba(245,158,11,.12);
+  --red-bg:   rgba(239,68,68,.12);
+  --radius:   10px;
+  --font:     'Space Grotesk', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #0d1424 0%, #111827 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-left { display:flex; align-items:center; gap:14px; }
+.logo-badge {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color:#fff;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  letter-spacing:.04em;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing:-.01em;
+}
+.header-subtitle {
+  font-size: 12px;
+  color: var(--text2);
+  font-family: var(--mono);
+}
+.header-right { display:flex; align-items:center; gap:20px; }
+.deadline-badge {
+  display:flex; align-items:center; gap:8px;
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size:12px;
+  font-family: var(--mono);
+}
+.deadline-badge .dot {
+  width:7px; height:7px;
+  border-radius:50%;
+  background: var(--red);
+  animation: blink 1.4s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.last-update { font-size:11px; color:var(--text3); font-family:var(--mono); }
+
+/* TABS */
+.tabs {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex;
+  gap: 2px;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all .2s;
+  display:flex; align-items:center; gap:7px;
+  letter-spacing:.01em;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-icon { font-size:15px; }
+
+/* VIEWS */
+.view { display:none; padding:28px 32px 40px; }
+.view.active { display:block; animation: fadeIn .25s ease; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* KPI CARDS */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.kpi-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0;
+  height:2px;
+  border-radius:2px 2px 0 0;
+}
+.kpi-card.blue::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.kpi-card.green::before { background: var(--green); }
+.kpi-card.yellow::before { background: var(--yellow); }
+.kpi-card.red::before { background: var(--red); }
+.kpi-card:hover { border-color: var(--border2); }
+.kpi-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; font-family:var(--mono); margin-bottom:10px; }
+.kpi-value { font-size: 34px; font-weight: 700; letter-spacing:-.02em; line-height:1; }
+.kpi-value.blue { color: var(--accent); }
+.kpi-value.green { color: var(--green); }
+.kpi-value.yellow { color: var(--yellow); }
+.kpi-value.red { color: var(--red); }
+.kpi-sub { font-size:12px; color:var(--text2); margin-top:8px; }
+.kpi-sub strong { color: var(--text); }
+.kpi-progress-bar {
+  height:4px; background:var(--border); border-radius:2px;
+  margin-top:12px; overflow:hidden;
+}
+.kpi-progress-fill {
+  height:100%; border-radius:2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 1s ease;
+}
+
+/* EXECUTIVE GRID */
+.exec-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* PANELS */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display:flex; align-items:center; gap:8px;
+}
+.panel-title-dot {
+  width:6px; height:6px; border-radius:50%;
+  background: var(--accent);
+}
+.panel-body { padding: 20px; }
+.panel-tag {
+  font-size:10px; font-family:var(--mono);
+  background: var(--border);
+  color: var(--text3);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+/* CHART */
+.chart-container { position:relative; height:280px; }
+
+/* RISK ALERTS */
+.risk-list { display:flex; flex-direction:column; gap:10px; max-height:320px; overflow-y:auto; padding-right:4px; }
+.risk-list::-webkit-scrollbar { width:4px; }
+.risk-list::-webkit-scrollbar-track { background:var(--bg3); }
+.risk-list::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+.risk-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.risk-item.critical { border-left-color: var(--red); }
+.risk-item.medium { border-left-color: var(--yellow); }
+.risk-item.low { border-left-color: var(--accent); }
+.risk-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.risk-desc { font-size:11px; color:var(--text2); line-height:1.5; }
+.risk-meta {
+  margin-top:6px;
+  display:flex; gap:6px; flex-wrap:wrap;
+}
+.tag {
+  font-size:10px; font-family:var(--mono);
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.tag-red { background:var(--red-bg); color:var(--red); }
+.tag-yellow { background:var(--yellow-bg); color:var(--yellow); }
+.tag-blue { background:rgba(59,130,246,.15); color:var(--accent); }
+.tag-green { background:var(--green-bg); color:var(--green); }
+
+/* TOPIC MINI CHART */
+.topic-bars { display:flex; flex-direction:column; gap:10px; }
+.topic-row { display:flex; align-items:center; gap:10px; }
+.topic-name { font-size:11px; color:var(--text2); width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+.topic-bar-bg { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+.topic-bar-fill { height:100%; border-radius:4px; transition: width 1.2s ease; }
+.topic-pct { font-size:11px; font-family:var(--mono); color:var(--text2); width:36px; text-align:right; flex-shrink:0; }
+
+/* OP VIEW */
+.op-filters {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.filter-label { font-size:11px; color:var(--text3); font-family:var(--mono); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
+.filter-group { display:flex; gap:8px; flex-wrap:wrap; }
+.filter-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size:12px;
+  padding: 5px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  transition: all .15s;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active { background: rgba(59,130,246,.15); border-color: var(--accent); color: var(--accent); font-weight:600; }
+.filter-divider { width:1px; height:24px; background:var(--border); }
+.search-input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size:13px;
+  padding: 6px 14px;
+  border-radius:20px;
+  outline:none;
+  transition: border-color .2s;
+  width:220px;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color:var(--text3); }
+
+/* OP GRID */
+.op-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* HEATMAP */
+.heatmap-table { width:100%; border-collapse:collapse; }
+.heatmap-table th {
+  font-size:10px; font-family:var(--mono); font-weight:600;
+  text-transform:uppercase; letter-spacing:.07em;
+  color:var(--text3); padding:8px 10px; text-align:center;
+  border-bottom:1px solid var(--border);
+}
+.heatmap-table th:first-child { text-align:left; }
+.heatmap-table td {
+  padding:8px 10px;
+  border-bottom:1px solid rgba(30,45,74,.5);
+  font-size:12px;
+}
+.heatmap-table td:first-child {
+  color:var(--text2); font-family:var(--mono); font-size:11px;
+  max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.hmap-cell {
+  text-align:center; font-family:var(--mono); font-weight:700;
+  border-radius:6px; font-size:13px;
+}
+.hmap-0 { color:var(--text3); }
+.hmap-green { background:var(--green-bg); color:var(--green); }
+.hmap-yellow { background:var(--yellow-bg); color:var(--yellow); }
+.hmap-red { background:var(--red-bg); color:var(--red); }
+.hmap-gray { background:rgba(100,116,139,.1); color:var(--text3); }
+.area-bar-row { display:flex; align-items:center; gap:6px; margin-top:4px; }
+.area-mini-bar { height:3px; border-radius:2px; flex:1; background:var(--border); overflow:hidden; }
+.area-mini-fill { height:100%; border-radius:2px; }
+
+/* ACTION TABLE */
+.action-table-wrap { overflow-x:auto; margin-top:0; }
+.action-table {
+  width:100%; border-collapse:collapse;
+  font-size:12px;
+}
+.action-table thead th {
+  font-size:10px; font-family:var(--mono); font-weight:600;
+  text-transform:uppercase; letter-spacing:.07em;
+  color:var(--text3); padding:10px 14px; text-align:left;
+  border-bottom:1px solid var(--border);
+  background:var(--bg3);
+  white-space:nowrap;
+  cursor:pointer; user-select:none;
+}
+.action-table thead th:hover { color:var(--text2); }
+.action-table tbody tr {
+  border-bottom:1px solid rgba(30,45,74,.5);
+  transition:background .15s;
+}
+.action-table tbody tr:hover { background:var(--bg3); }
+.action-table tbody td { padding:10px 14px; color:var(--text2); vertical-align:top; }
+.action-table tbody td:first-child { font-family:var(--mono); color:var(--accent); font-size:11px; font-weight:500; }
+.status-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; font-family:var(--mono); font-weight:600;
+  padding:3px 8px; border-radius:20px;
+  white-space:nowrap;
+}
+.pill-red { background:var(--red-bg); color:var(--red); }
+.pill-yellow { background:var(--yellow-bg); color:var(--yellow); }
+.pill-green { background:var(--green-bg); color:var(--green); }
+.pill-gray { background:rgba(100,116,139,.1); color:var(--text3); }
+.mat-dot {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:50%;
+  font-size:10px; font-family:var(--mono); font-weight:700;
+}
+.mat-0 { background:var(--red-bg); color:var(--red); }
+.mat-1 { background:var(--yellow-bg); color:var(--yellow); }
+.mat-2 { background:rgba(59,130,246,.15); color:var(--accent); }
+.mat-3 { background:var(--green-bg); color:var(--green); }
+
+.obs-text { color:var(--text3); font-size:11px; max-width:220px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ev-text { max-width:200px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:11px; }
+
+/* TABLE FOOTER */
+.table-footer {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px;
+  border-top:1px solid var(--border);
+  background:var(--bg3);
+}
+.table-count { font-size:11px; font-family:var(--mono); color:var(--text3); }
+.table-nav { display:flex; gap:8px; align-items:center; }
+.nav-btn {
+  background:var(--border); border:none; color:var(--text2);
+  width:28px; height:28px; border-radius:6px;
+  cursor:pointer; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .15s;
+}
+.nav-btn:hover:not(:disabled) { background:var(--accent); color:#fff; }
+.nav-btn:disabled { opacity:.3; cursor:default; }
+.page-info { font-size:11px; font-family:var(--mono); color:var(--text2); }
+
+/* LEGEND */
+.legend { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text2); }
+.legend-dot { width:8px; height:8px; border-radius:50%; }
+
+/* SECTION TITLE */
+.section-title {
+  font-size:11px; font-family:var(--mono); font-weight:600;
+  text-transform:uppercase; letter-spacing:.1em;
+  color:var(--text3); margin-bottom:16px;
+  display:flex; align-items:center; gap:10px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* SCROLL */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+
+/* RESPONSIVE */
+@media(max-width:900px) {
+  .exec-grid { grid-template-columns:1fr; }
+  .op-grid { grid-template-columns:1fr; }
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .header { padding:0 16px; }
+  .view { padding:16px; }
+}
+
+/* SPINNER */
+.spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* CONFIG BAR */
+.config-bar {
+  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(6,182,212,.06));
+  border-bottom: 1px solid var(--border);
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.config-label {
+  font-size:11px; font-family:var(--mono); color:var(--text3);
+  text-transform:uppercase; letter-spacing:.07em; white-space:nowrap;
+}
+.config-input {
+  flex: 1; min-width: 280px; max-width: 560px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color .2s;
+}
+.config-input:focus { border-color: var(--accent); }
+.config-input::placeholder { color: var(--text3); }
+.config-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity .2s;
+  white-space: nowrap;
+}
+.config-btn:hover { opacity: .85; }
+.config-btn:disabled { opacity: .4; cursor: default; }
+.config-status {
+  font-size: 11px; font-family: var(--mono);
+  display: flex; align-items: center; gap: 6px;
+}
+.config-status.ok { color: var(--green); }
+.config-status.err { color: var(--red); }
+.config-status.loading { color: var(--accent); }
+.config-hint {
+  font-size: 11px; color: var(--text3); font-family: var(--mono);
+  display: flex; align-items: center; gap: 6px;
+}
+.config-hint a { color: var(--accent2); text-decoration: none; }
+.config-hint a:hover { text-decoration: underline; }
+
+/* LOADING OVERLAY */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(11,15,26,.92);
+  backdrop-filter: blur(6px);
+  z-index: 999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px;
+  transition: opacity .4s;
+}
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-logo {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; font-family: var(--mono); font-weight: 700;
+  font-size: 14px; padding: 8px 16px; border-radius: 8px;
+  letter-spacing: .04em;
+}
+.loading-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.loading-text { font-size: 13px; color: var(--text2); font-family: var(--mono); }
+.loading-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-logo">ISO 27001</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Carregando dados…</div>
+  <div class="loading-sub" id="loadingSubText">Aguarde um momento</div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-badge">ISO 27001</div>
+    <div>
+      <div class="header-title">AltoQi · Dashboard de Certificação</div>
+      <div class="header-subtitle">Monitorização de Controles · Auditoria Março 2027</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="deadline-badge">
+      <span class="dot"></span>
+      <span id="daysLeft">— dias restantes</span>
+    </div>
+    <div class="last-update" id="lastUpdate">Atualizado: —</div>
+  </div>
+</header>
+
+<!-- CONFIG BAR -->
+<div class="config-bar" id="configBar">
+  <span class="config-label">📊 Google Sheets</span>
+  <input class="config-input" id="sheetUrlInput"
+    placeholder="Cole aqui a URL da sua planilha publicada do Google Sheets…"/>
+  <button class="config-btn" id="loadSheetBtn" onclick="loadFromSheet()">↻ Carregar dados</button>
+  <button class="config-btn" id="disconnectBtn" onclick="disconnectSheet()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);display:none;">✕ Desconectar</button>
+  <span class="config-status" id="configStatus"></span>
+  <span class="config-hint">
+    💡 <a href="#" onclick="showSheetHelp(); return false;">Como publicar a planilha?</a>
+  </span>
+</div>
+
+<!-- SHEET HELP MODAL -->
+<div id="helpModal" style="display:none;position:fixed;inset:0;background:rgba(11,15,26,.85);backdrop-filter:blur(6px);z-index:998;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px 32px;max-width:520px;width:90%;position:relative;">
+    <button onclick="document.getElementById('helpModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">✕</button>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px;">Como conectar o Google Sheets</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-bottom:6px;">PASSO 1 — Abrir a planilha no Google Sheets</div>
+        <div style="font-size:12px;color:var(--text2);">Certifique-se que a planilha tem as mesmas colunas do CSV original (separador <code style="background:var(--bg);padding:1px 5px;border-radius:3px;font-family:var(--mono);">;</code>).</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-bottom:6px;">PASSO 2 — Publicar na web</div>
+        <div style="font-size:12px;color:var(--text2);">No menu: <strong style="color:var(--text)">Arquivo → Compartilhar → Publicar na Web</strong><br/>Selecione a aba correta e o formato <strong style="color:var(--text)">Valores separados por vírgula (.csv)</strong>. Clique em <strong style="color:var(--text)">Publicar</strong>.</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-bottom:6px;">PASSO 3 — Copiar o link gerado</div>
+        <div style="font-size:12px;color:var(--text2);">O Google vai gerar um link no formato:<br/><code style="background:var(--bg);padding:3px 6px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--accent2);display:block;margin-top:6px;word-break:break-all;">https://docs.google.com/spreadsheets/d/e/…/pub?output=csv</code></div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-bottom:6px;">PASSO 4 — Colar no dashboard</div>
+        <div style="font-size:12px;color:var(--text2);">Cole o link no campo acima e clique em <strong style="color:var(--text)">Carregar dados</strong>. A partir daí, o dashboard atualiza sozinho a cada abertura.</div>
+      </div>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 14px;">
+        <div style="font-size:11px;color:var(--yellow);font-family:var(--mono);">⚠️ IMPORTANTE: A planilha precisa estar com acesso "Qualquer pessoa com o link pode ver" para o dashboard conseguir ler os dados.</div>
+      </div>
+    </div>
+    <button onclick="document.getElementById('helpModal').style.display='none'" style="margin-top:18px;background:var(--accent);border:none;color:#fff;padding:9px 24px;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;width:100%;">Entendido</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab-btn active" onclick="switchTab('executive', this)">
+    <span class="tab-icon">📊</span> Visão Executiva
+  </button>
+  <button class="tab-btn" onclick="switchTab('operational', this)">
+    <span class="tab-icon">⚙️</span> Visão Operacional & Gargalos
+  </button>
+</nav>
+
+<!-- EXECUTIVE VIEW -->
+<div class="view active" id="view-executive">
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Progresso Geral</div>
+      <div class="kpi-value blue" id="kpiProgress">—</div>
+      <div class="kpi-sub"><strong id="kpiImp">—</strong> implementados de <strong id="kpiTotal">—</strong></div>
+      <div class="kpi-progress-bar"><div class="kpi-progress-fill" id="kpiProgressBar" style="width:0%"></div></div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Maturidade Média</div>
+      <div class="kpi-value green" id="kpiMaturity">—</div>
+      <div class="kpi-sub">Escala de <strong>0</strong> a <strong>3</strong> · Meta: ≥ 2.0</div>
+      <div class="kpi-progress-bar"><div class="kpi-progress-fill" id="kpiMatBar" style="width:0%; background:var(--green)"></div></div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Dias Restantes</div>
+      <div class="kpi-value red" id="kpiDays">—</div>
+      <div class="kpi-sub">Meta: <strong>Março 2027</strong> · Auditoria final</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Não Implementados</div>
+      <div class="kpi-value yellow" id="kpiNotImpl">—</div>
+      <div class="kpi-sub"><strong id="kpiInProgress">—</strong> em andamento · <strong id="kpiNoStatus">—</strong> sem status</div>
+    </div>
+  </div>
+
+  <!-- Burnup + Alerts -->
+  <div class="exec-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot"></span> Burnup Chart · Progresso de Implementação</div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background:var(--border2)"></span>Escopo Total</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>Implementados</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--accent);opacity:.6"></span>Projeção Ideal</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-container">
+          <canvas id="burnupChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot" style="background:var(--red)"></span> Alertas de Risco</div>
+        <div class="panel-tag" id="alertCount">— alertas</div>
+      </div>
+      <div class="panel-body" style="padding:14px 16px;">
+        <div class="risk-list" id="riskList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topic progress -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title"><span class="panel-title-dot" style="background:var(--accent2)"></span> Progresso por Tópico</div>
+    </div>
+    <div class="panel-body">
+      <div class="topic-bars" id="topicBars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OPERATIONAL VIEW -->
+<div class="view" id="view-operational">
+
+  <!-- Filters -->
+  <div class="op-filters">
+    <span class="filter-label">Área</span>
+    <div class="filter-group" id="filterArea"></div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Status</span>
+    <div class="filter-group" id="filterStatus"></div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Tópico</span>
+    <div class="filter-group" id="filterTopic"></div>
+    <div class="filter-divider"></div>
+    <input class="search-input" id="searchInput" placeholder="🔍  Buscar controle..." oninput="applyFilters()"/>
+  </div>
+
+  <!-- Heatmap + Donut -->
+  <div class="op-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot" style="background:var(--yellow)"></span> Mapa de Calor · Área × Status</div>
+        <div class="panel-tag">Gargalos identificados</div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div style="overflow-x:auto;">
+          <table class="heatmap-table" id="heatmapTable"></table>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot" style="background:var(--accent2)"></span> Distribuição por Status</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div style="position:relative;height:200px;width:200px;">
+          <canvas id="donutChart"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:26px;font-weight:700;color:var(--text)" id="donutCenter">—</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">total</div>
+          </div>
+        </div>
+        <div id="donutLegend" style="display:flex;flex-direction:column;gap:10px;width:100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Table -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title"><span class="panel-title-dot" style="background:var(--green)"></span> Plano de Ação · Controles Pendentes</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="panel-tag" id="tableCount">— itens</div>
+      </div>
+    </div>
+    <div class="action-table-wrap">
+      <table class="action-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable('id')" title="Ordenar por ID">ID ↕</th>
+            <th onclick="sortTable('topic')">Tópico ↕</th>
+            <th onclick="sortTable('desc')">Controle ↕</th>
+            <th onclick="sortTable('area')">Área ↕</th>
+            <th onclick="sortTable('status')">Status ↕</th>
+            <th onclick="sortTable('mat')">Mat. ↕</th>
+            <th>Evidência Esperada</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody id="actionTableBody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <div class="table-count" id="tableFooterCount">Exibindo — de — registros</div>
+      <div class="table-nav">
+        <button class="nav-btn" id="btnPrev" onclick="changePage(-1)">‹</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button class="nav-btn" id="btnNext" onclick="changePage(1)">›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA — CSV embedded
+// ============================================================
+const RAW_CSV = `ID do Controle;Tópico;Descrição do Controle;Detalhes;Evidência esperada;Maturidade;Área Responsável;Status de Implementação;Observações / Histórico
+5.1;5.Organizacional;Políticas de segurança da informação;Criar, aprovar pela direção, publicar e comunicar o conjunto de regras de SI.;Documentos (.md) publicados, histórico de commits de aprovação e logs de leitura/comunicação.;1.5;CloudOps;Em andamento;Em processo de revisão
+5.2;5.Organizacional;Papéis e responsabilidades;Definir e documentar quem faz o quê na segurança da informação.;Organograma da AltoQi, Matriz RACI de SI e Job Descriptions atualizados.;1.5;CloudOps;Em andamento;RH
+5.3;5.Organizacional;Segregação de funções;Separar tarefas críticas para evitar fraudes ou erros não intencionais.;Matriz de acessos mostrando que quem aprova não é a mesma pessoa que executa.;1.5;CloudOps;Implementado;Infraestrutura implementa tecnicamente / SI define regras e revisa
+5.4;5.Organizacional;Responsabilidades da direção;A alta gestão deve apoiar e cobrar ativamente a segurança da informação.;Atas de reunião de diretoria com pautas de riscos e SI.;0.0;CloudOps;Em andamento;GT de segurança reunião cada 30 dias - falta padronizar e disponibilizar
+5.5;5.Organizacional;Contato com autoridades;Manter lista de contatos de órgãos reguladores, ANPD e polícia para casos de incidentes.;Documento de plano de resposta a incidentes com a lista de contatos atualizada.;0.0;CloudOps;;DPO
+5.6;5.Organizacional;Contato com grupos de interesse;Participar de fóruns, grupos de segurança e associações do setor.;Comprovantes de inscrição em grupos (ex: fóruns de CISO, listas de e-mail de SI).;0.0;CloudOps;Implementado;ABES, Linkedin
+5.7;5.Organizacional;Inteligência de ameaças;Coletar e analisar informações sobre novas ameaças do mercado.;Relatórios de vulnerabilidades, assinaturas de feeds de threat intelligence.;0.0;CloudOps;Implementado;Datadog com WAF OWASP API Top 10, SAST e AWS Trusted Advisor
+5.8;5.Organizacional;SI no gerenciamento de projetos;Integrar requisitos de segurança desde o início de qualquer novo projeto.;Checklist de segurança preenchido na fase de desenho de novos projetos/sistemas.;0.0;CloudOps;Em andamento;Política de menor privilégio e acesso segundo PSI - documentar e gerar checklist
+5.15;5.Organizacional;Controle de acesso;Estabelecer regras de quem pode acessar o quê, baseado no menor privilégio.;Política de Controle de Acesso aprovada e fluxos documentados.;0.0;CloudOps;Em andamento;PSI e aguardando matriz
+5.17;5.Organizacional;Informação de autenticação;Garantir senhas fortes, MFA e proteção de chaves de acesso.;Configuração de MFA ativada nos sistemas e política de senhas aplicada via sistema.;0.0;CloudOps;Em andamento;Política de senha ADMIN e MFA implantadas
+5.18;5.Organizacional;Direitos de acesso;Revisar periodicamente se as pessoas ainda precisam dos acessos que possuem.;Planilha de recertificação de acessos assinada pelos gestores a cada 6 meses.;0.0;CloudOps;Não implementado;Criar processo
+5.19;5.Organizacional;SI nas relações com fornecedores;Avaliar os riscos de segurança antes de contratar terceiros.;Questionário de Due Diligence de segurança preenchido pelos fornecedores.;0.0;CloudOps;Em andamento;Fornecedores homologados - ver legal
+5.2;5.Organizacional;Segurança em acordos com fornecedores;Inserir cláusulas de segurança da informação nos contratos.;Contratos assinados contendo SLA de segurança, multas e regras de privacidade.;3.0;CloudOps;Implementado;NDA elaborado pelo Jurídico em cada situação.
+5.21;5.Organizacional;SI na cadeia de suprimentos de TIC;Garantir que produtos e serviços de TI comprados sejam seguros desde a origem.;Evidência de análise de risco na aquisição de novos softwares.;0.0;CloudOps;Implementado;Fornecedores homologados e análise jurídica antes da compra
+5.22;5.Organizacional;Monitoramento de fornecedores;Auditar e monitorar se o fornecedor continua cumprindo a segurança exigida.;Relatórios de auditoria anual de fornecedores críticos ou revisão de relatórios SOC2.;0.0;CloudOps;Não implementado;Criar processo formalmente
+5.23;5.Organizacional;SI no uso de serviços em nuvem;Definir regras claras para aquisição e uso de AWS, Azure, Google Cloud.;Política de uso de nuvem e arquitetura de segurança cloud documentada.;0.0;CloudOps;Não implementado;
+5.23;5.Organizacional;SI no uso de serviços em nuvem;Definir regras claras para aquisição e uso de AWS, Azure, Google Cloud.;Política de uso de nuvem e arquitetura de segurança cloud documentada.;0.0;CloudOps;Em andamento;Em processo de revisão
+5.24;5.Organizacional;Planejamento de gestão de incidentes;Estabelecer como a empresa vai reagir caso ocorra um vazamento ou ataque.;Plano de Resposta a Incidentes documentado e testado.;0.0;CloudOps;Não implementado;
+5.25;5.Organizacional;Avaliação de eventos de SI;Triar alertas para definir se é um falso positivo ou um incidente real.;Logs de ferramentas de monitoramento (SIEM) e tickets de investigação.;1.5;CloudOps;Em andamento;Em processo de revisão
+5.26;5.Organizacional;Resposta a incidentes;Agir de forma estruturada para conter, erradicar e recuperar de um incidente.;Relatório de pós-incidente (Post-mortem) preenchido após a resolução.;0.0;CloudOps;Não implementado;
+5.27;5.Organizacional;Aprendizado com incidentes;Melhorar as defesas com base no que deu errado em incidentes passados.;Atualização de políticas ou regras de firewall motivadas por um incidente anterior.;1.5;CloudOps;Implementado;
+5.28;5.Organizacional;Coleta de evidências;Preservar logs e rastros de forma legalmente válida após um ataque.;Procedimento de cadeia de custódia documentado e logs invioláveis.;0.0;CloudOps;Não implementado;
+5.29;5.Organizacional;SI durante interrupções;Garantir que a segurança não seja desligada durante uma crise.;Teste do PCN mantendo os controles ativos.;0.0;CloudOps;Em andamento;Precisa processo documentado - adicionar infra AWS
+5.35;5.Organizacional;Análise crítica independente;Realizar auditorias internas isentas para validar a segurança.;Relatório de Auditoria Interna feito por área independente.;0.0;CloudOps;Em andamento;Pentest
+5.36;5.Organizacional;Conformidade com políticas;Os gestores devem garantir que suas áreas seguem as políticas de SI.;Evidências de verificações gerenciais nos processos de negócio.;0.0;CloudOps;Não implementado;Marcos/Edu
+5.37;5.Organizacional;Procedimentos operacionais;Documentar o passo a passo das rotinas de TI e Segurança.;Manuais de operação (Runbooks) documentados e disponíveis para a equipe.;0.0;CloudOps;Em andamento;em andamento e revisão
+6.3;6.Pessoas;Conscientização e treinamento;Treinar os funcionários para não caírem em golpes e seguirem as políticas.;Lista de presença/conclusão de treinamentos de SI e métricas de phishing simulado.;1.5;CloudOps;Em andamento;ISO 27001 treinamentos
+6.4;6.Pessoas;Processo disciplinar;Ter regras claras de punição caso alguém viole propositalmente a segurança.;Política disciplinar formalizada e advertências aplicadas pelo RH.;1.5;CloudOps;Em andamento;RH/PSI
+6.5;6.Pessoas;Responsabilidades no término;Lembrar o colaborador das regras de sigilo após a demissão.;Termo de devolução e manutenção de sigilo assinado no offboarding.;0.0;CloudOps;;RH
+6.6;6.Pessoas;Acordos de confidencialidade;Proteger o vazamento de informações assinando NDAs.;NDA assinado e armazenado no repositório jurídico.;3.0;CloudOps;Implementado;
+6.7;6.Pessoas;Trabalho remoto;Estabelecer controles para proteger dados fora do escritório.;Política de Trabalho Remoto e uso obrigatório de VPN para sistemas internos.;0.0;CloudOps;Em andamento;Parcialmente Implementado, VPN, antivirus
+8.2;8.Tecnológico;Direitos de acesso privilegiado;Controle rigoroso sobre usuários com poder de administrador.;Uso de ferramenta de cofre de senhas (PAM) e aprovação formal para ser admin.;1.5;CloudOps;Em andamento;Passabolt, controle de acesso PSI e menor privilégio
+8.3;8.Tecnológico;Restrição de acesso a informações;Limitar o acesso apenas ao necessário nos sistemas.;Matrizes RBAC implementadas nas aplicações.;0.0;CloudOps;Implementado;peering, liberação IP VPN e acessos menor privilégio
+8.4;8.Tecnológico;Acesso a códigos-fonte;Impedir que qualquer um altere ou baixe o código dos sistemas proprietários.;Repositório do código-fonte (Git) com permissões restritas e logs de acesso.;3.0;CloudOps;Implementado;Validar com Dev
+8.4;8.Tecnológico;Acesso a códigos-fonte;Impedir que qualquer um altere ou baixe o código dos sistemas proprietários.;Repositório do código-fonte (Git) com permissões restritas e logs de acesso.;3.0;CloudOps;Implementado;Permissões Github
+8.5;8.Tecnológico;Autenticação segura;Garantir que a pessoa é quem diz ser ao logar em sistemas críticos.;Sessões expirando por inatividade, bloqueio após 5 erros de senha e MFA obrigatório.;0.0;CloudOps;Não implementado;Validação de sistemas críticos
+8.5;8.Tecnológico;Autenticação segura;Garantir que a pessoa é quem diz ser ao logar em sistemas críticos.;Sessões expirando por inatividade, bloqueio após 5 erros de senha e MFA obrigatório.;0.0;CloudOps;Implementado;ok, Keycloak Admin, AWS e Github
+8.6;8.Tecnológico;Gestão de capacidade;Monitorar disco, CPU e memória para o sistema não cair por sobrecarga.;Dashboards de monitoramento com alertas de 80% de uso de disco.;3.0;CloudOps;Implementado;Zabbix, Datadog com integração teams
+8.7;8.Tecnológico;Proteção contra malware;Ter defesas ativas contra vírus, ransomware e spywares.;Console do Antivírus/EDR mostrando 100% dos computadores atualizados.;3.0;CloudOps;Implementado;Validar SO Windows Server
+8.8;8.Tecnológico;Gestão de vulnerabilidades;Descobrir e corrigir falhas de segurança antes que sejam exploradas.;Relatório de Scan de Vulnerabilidade e evidência da aplicação de patches.;1.5;CloudOps;Implementado;Patches automáticos RDS e MongoDB, SAST nas aplicações
+8.9;8.Tecnológico;Gestão de configuração;Garantir que sistemas nasçam com uma configuração de segurança padrão.;Documento de Baseline de Segurança (Hardening) aprovado e aplicado.;0.0;CloudOps;Não implementado;
+8.1;8.Tecnológico;Exclusão de informações;Apagar dados de forma definitiva quando não forem mais necessários.;Evidência de rotinas automáticas de expurgo de dados antigos.;0.0;CloudOps;Implementado;Aplicações e ambientes descontinuados
+8.13;8.Tecnológico;Backup de informações;Garantir a cópia segura dos dados e testar a restauração.;Relatório de sucesso dos backups diários e log de teste de restauração trimestral.;1.5;CloudOps;Em andamento;Ausente teste de restore
+8.13;8.Tecnológico;Backup de informações;Garantir a cópia segura dos dados e testar a restauração.;Relatório de sucesso dos backups diários e log de teste de restauração trimestral.;1.5;CloudOps;Em andamento;em andamento
+8.14;8.Tecnológico;Redundância de processamento;Ter sistemas duplicados para assumir a operação se o principal cair.;Arquitetura cloud configurada em Multi-AZ.;0.0;CloudOps;Não implementado;Validar com Dev
+8.14;8.Tecnológico;Redundância de processamento;Ter sistemas duplicados para assumir a operação se o principal cair.;Arquitetura cloud configurada em Multi-AZ.;0.0;CloudOps;Em andamento;em andamento
+8.15;8.Tecnológico;Geração de registros (Logging);Gravar quem fez o quê, quando, e de onde nos sistemas.;Logs centrais (SIEM) contendo IP, usuário, data, hora e ação.;1.5;CloudOps;Em andamento;SIEM, cloudtrail, cloudwatch
+8.16;8.Tecnológico;Atividades de monitoramento;Analisar os logs ativamente em busca de anomalias.;Alertas de segurança por acessos simultâneos de países diferentes.;1.5;CloudOps;Implementado;uptime e datadog WAF AWS
+8.17;8.Tecnológico;Sincronização de relógios;Garantir que todos os servidores tenham a mesma hora exata.;Servidores configurados apontando para servidor de tempo NTP oficial.;3.0;CloudOps;Implementado;AWS NTP
+8.25;8.Tecnológico;Ciclo de desenvolvimento seguro;Integrar segurança em todas as fases da criação de software (DevSecOps).;Documento de metodologia de desenvolvimento incluindo testes de segurança.;0.0;CloudOps;Não implementado;
+8.26;8.Tecnológico;Requisitos de segurança;Definir o que um software precisa ter de segurança antes de ser programado.;Histórias de usuário no Jira/Trello contendo requisitos de segurança.;0.0;CloudOps;Não implementado;
+8.27;8.Tecnológico;Arquitetura e engenharia segura;Projetar sistemas considerando princípios de segurança desde o início.;Diagramas de arquitetura aprovados pelo comitê de segurança.;0.0;CloudOps;Não implementado;
+8.28;8.Tecnológico;Codificação segura;Escrever código limpo e sem vulnerabilidades conhecidas (OWASP).;Uso de ferramentas de SAST/DAST no pipeline de integração.;0.0;CloudOps;Não implementado;
+8.28;8.Tecnológico;Codificação segura;Escrever código limpo e sem vulnerabilidades conhecidas (OWASP).;Uso de ferramentas de SAST/DAST no pipeline de integração.;0.0;CloudOps;Em andamento;Datadog
+8.29;8.Tecnológico;Testes de segurança;Validar ativamente se o sistema pode ser hackeado antes de ir pro ar.;Relatório de Pentest ou scanner dinâmico antes do Go-Live.;0.0;CloudOps;Não implementado;
+8.29;8.Tecnológico;Testes de segurança;Validar ativamente se o sistema pode ser hackeado antes de ir pro ar.;Relatório de Pentest ou scanner dinâmico antes do Go-Live.;0.0;CloudOps;Não implementado;Pentest somente em PROD
+8.31;8.Tecnológico;Separação de ambientes;Garantir que o ambiente de teste não se misture com o sistema oficial.;Redes de DEV, Q&A e PROD isoladas.;3.0;CloudOps;Implementado;
+8.31;8.Tecnológico;Separação de ambientes;Garantir que o ambiente de teste não se misture com o sistema oficial.;Redes de DEV, Q&A e PROD isoladas.;3.0;CloudOps;Implementado;Contas e pipeline separadas AWS
+8.32;8.Tecnológico;Gestão de mudanças;Aprovar e testar alterações antes de colocar em produção.;Tickets de requisição de mudança (GMUD) aprovados contendo plano de rollback.;1.5;CloudOps;Em andamento;
+8.32;8.Tecnológico;Gestão de mudanças;Aprovar e testar alterações antes de colocar em produção.;Tickets de requisição de mudança (GMUD) aprovados contendo plano de rollback.;1.5;CloudOps;Em andamento;em revisão gestão de mudança
+8.33;8.Tecnológico;Informações de teste;Nunca usar dados reais de clientes (PII) em ambientes de desenvolvimento.;Ambiente de QA populado com dados fictícios ou mascarados.;0.0;CloudOps;Não implementado;
+8.34;8.Tecnológico;Sistemas durante auditoria;Garantir que a própria auditoria ou pentest não derrube o sistema.;Janelas de manutenção definidas e ambiente espelhado para testes destrutivos.;0.0;CloudOps;Não implementado;
+8.34;8.Tecnológico;Sistemas durante auditoria;Garantir que a própria auditoria ou pentest não derrube o sistema.;Janelas de manutenção definidas e ambiente espelhado para testes destrutivos.;0.0;CloudOps;Implementado;
+5.21;5.Organizacional;SI na cadeia de suprimentos de TIC;Garantir que produtos e serviços de TI comprados sejam seguros desde a origem.;Evidência de análise de risco na aquisição de novos softwares.;0.0;Compras/ Infra;Não implementado;Validar a evidencia - para entrega
+8.2;8.Tecnológico;Direitos de acesso privilegiado;Controle rigoroso sobre usuários com poder de administrador.;Uso de ferramenta de cofre de senhas (PAM) e aprovação formal para ser admin.;1.5;Desenvolvimento Desktop;;Jenkins, Visual SVN
+8.3;8.Tecnológico;Restrição de acesso a informações;Limitar o acesso apenas ao necessário nos sistemas.;Matrizes RBAC implementadas nas aplicações.;0.0;Desenvolvimento Desktop;Implementado;Jenkins, Visual SVN
+8.4;8.Tecnológico;Acesso a códigos-fonte;Impedir que qualquer um altere ou baixe o código dos sistemas proprietários.;Repositório do código-fonte (Git) com permissões restritas e logs de acesso.;3.0;Desenvolvimento Desktop;Implementado;Jenkins, Visual SVN (sem acesso externo)
+8.5;8.Tecnológico;Autenticação segura;Garantir que a pessoa é quem diz ser ao logar em sistemas críticos.;Sessões expirando por inatividade, bloqueio após 5 erros de senha e MFA obrigatório.;0.0;Desenvolvimento Desktop;Não implementado;Jenkins, Visual SVN (login e senha)
+8.8;8.Tecnológico;Gestão de vulnerabilidades;Descobrir e corrigir falhas de segurança antes que sejam exploradas.;Relatório de Scan de Vulnerabilidade e patches.;1.5;Desenvolvimento Desktop;Em andamento;MPS - gerenciamento de config
+8.9;8.Tecnológico;Gestão de configuração;Garantir que sistemas nasçam com uma configuração de segurança padrão.;Documento de Baseline de Segurança (Hardening) aprovado.;0.0;Desenvolvimento Desktop;Em andamento;MPS - gerenciamento de config
+8.1;8.Tecnológico;Exclusão de informações;Apagar dados de forma definitiva quando não forem mais necessários.;Evidência de rotinas automáticas de expurgo de dados antigos.;0.0;Desenvolvimento Desktop;;SO
+8.25;8.Tecnológico;Ciclo de desenvolvimento seguro;Integrar segurança em todas as fases da criação de software.;Documento de metodologia incluindo testes de segurança.;0.0;Desenvolvimento Desktop;Implementado;MPS BR
+8.26;8.Tecnológico;Requisitos de segurança;Definir requisitos de segurança antes de programar.;Histórias de usuário no Jira/Trello contendo requisitos de segurança.;0.0;Desenvolvimento Desktop;Implementado;Target Process
+8.27;8.Tecnológico;Arquitetura e engenharia segura;Projetar sistemas com segurança desde o início.;Diagramas de arquitetura aprovados pelo comitê de segurança.;0.0;Desenvolvimento Desktop;Implementado;MPS BR
+8.31;8.Tecnológico;Separação de ambientes;Garantir que o ambiente de teste não se misture com PROD.;Redes de DEV, Q&A e PROD isoladas.;3.0;Desenvolvimento Desktop;Implementado;
+8.32;8.Tecnológico;Gestão de mudanças;Aprovar e testar alterações antes de colocar em produção.;Tickets de GMUD aprovados contendo plano de rollback.;1.5;Desenvolvimento Desktop;Implementado;SVN
+5.3;5.Organizacional;Segregação de funções;Separar tarefas críticas para evitar fraudes.;Matriz de acessos mostrando segregação.;1.5;Desenvolvimento Web;Implementado;Evidência dos perfis existentes
+5.14;5.Organizacional;Transferência de informação;Proteger dados quando enviados para fora da empresa.;Uso de criptografia em anexos, ferramentas de SFTP aprovadas.;1.5;Desenvolvimento Web;Implementado;SSL, criptografia em repouso
+5.15;5.Organizacional;Controle de acesso;Estabelecer regras de quem pode acessar o quê.;Política de Controle de Acesso aprovada e fluxos documentados.;0.0;Desenvolvimento Web;Implementado;3 níveis: proprietário admin, gerente e colaborador
+5.17;5.Organizacional;Informação de autenticação;Garantir senhas fortes, MFA e proteção de chaves.;Configuração de MFA ativada nos sistemas.;0.0;Desenvolvimento Web;Em andamento;Ferramentas terceirizadas
+5.23;5.Organizacional;SI no uso de serviços em nuvem;Definir regras para uso de AWS, Azure, Google Cloud.;Política de uso de nuvem documentada.;0.0;Desenvolvimento Web;Implementado;AWS, DataDog
+5.29;5.Organizacional;SI durante interrupções;Garantir que a segurança não seja desligada durante crise.;Teste do PCN mantendo controles ativos.;0.0;Desenvolvimento Web;Não implementado;
+5.35;5.Organizacional;Análise crítica independente;Realizar auditorias internas isentas.;Relatório de Auditoria Interna por área independente.;0.0;Desenvolvimento Web;Não implementado;
+5.36;5.Organizacional;Conformidade com políticas;Os gestores devem garantir cumprimento das políticas de SI.;Evidências de verificações gerenciais.;0.0;Desenvolvimento Web;Não implementado;
+8.4;8.Tecnológico;Acesso a códigos-fonte;Impedir acesso não autorizado ao código dos sistemas.;Repositório Git com permissões restritas e logs.;3.0;Desenvolvimento Web;Implementado;GitHub - Cloud
+8.5;8.Tecnológico;Autenticação segura;Garantir identidade ao logar em sistemas críticos.;Sessões expirando por inatividade, MFA obrigatório.;0.0;Desenvolvimento Web;Em andamento;
+8.8;8.Tecnológico;Gestão de vulnerabilidades;Descobrir e corrigir falhas de segurança.;Relatório de Scan de Vulnerabilidade e patches.;1.5;Desenvolvimento Web;Em andamento;integração com CI/CD
+8.25;8.Tecnológico;Ciclo de desenvolvimento seguro;Integrar segurança em todas as fases de software.;Metodologia incluindo testes de segurança.;0.0;Desenvolvimento Web;Em andamento;Parcialmente implementado
+8.26;8.Tecnológico;Requisitos de segurança;Definir requisitos de segurança antes de programar.;Histórias de usuário com requisitos de segurança.;0.0;Desenvolvimento Web;Não implementado;
+8.27;8.Tecnológico;Arquitetura e engenharia segura;Projetar sistemas com segurança desde o início.;Diagramas de arquitetura aprovados.;0.0;Desenvolvimento Web;Não implementado;
+8.28;8.Tecnológico;Codificação segura;Escrever código limpo sem vulnerabilidades (OWASP).;SAST/DAST no pipeline de integração.;0.0;Desenvolvimento Web;Em andamento;Parcialmente implementado
+8.29;8.Tecnológico;Testes de segurança;Validar se o sistema pode ser hackeado antes de Go-Live.;Relatório de Pentest antes do Go-Live.;0.0;Desenvolvimento Web;Em andamento;Parcialmente implementado
+8.3;8.Tecnológico;Desenvolvimento terceirizado;Fábricas de software devem seguir mesmas regras de segurança.;Contrato exigindo práticas seguras e relatórios de vulnerabilidades.;0.0;Desenvolvimento Web;;Validação de contratos
+8.31;8.Tecnológico;Separação de ambientes;Ambiente de teste não se mistura com PROD.;Redes DEV, Q&A e PROD isoladas.;3.0;Desenvolvimento Web;Implementado;Coleta de evidências
+8.32;8.Tecnológico;Gestão de mudanças;Aprovar e testar alterações antes de produção.;Tickets GMUD aprovados com rollback.;1.5;Desenvolvimento Web;Implementado;Target Process / GitHub Release
+8.33;8.Tecnológico;Informações de teste;Nunca usar dados reais em desenvolvimento ou teste.;Ambiente QA com dados fictícios ou mascarados.;0.0;Desenvolvimento Web;Em andamento;Validar
+8.34;8.Tecnológico;Sistemas durante auditoria;Auditoria ou pentest não deve derrubar o sistema.;Janelas de manutenção e ambiente espelhado.;0.0;Desenvolvimento Web;;Validar com equipe
+7.1;7.Físico;Perímetros de segurança física;Ter barreiras físicas para proteger áreas sensíveis.;Planta baixa mostrando zonas de segurança e catracas instaladas.;3.0;Facilities;Implementado;Serviço terceirizado - contrato de 8 anos
+7.2;7.Físico;Entrada física;Controlar quem entra no prédio e registrar visitantes.;Relatório do sistema de catraca/biometria e livro de registro.;3.0;Facilities;Implementado;Serviço terceirizado - contrato de 8 anos
+7.3;7.Físico;Segurança de escritórios e instalações;Projetar o ambiente para evitar espionagem.;Portas com controle de acesso em salas de servidores.;3.0;Facilities;Implementado;Serviço terceirizado - contrato de 8 anos
+7.4;7.Físico;Monitoramento de segurança física;Vigiar as instalações continuamente.;Gravações de CFTV mantidas pelo período estipulado.;3.0;Facilities;Implementado;Serviço terceirizado - contrato de 8 anos
+7.5;7.Físico;Ameaças físicas e ambientais;Proteger contra incêndios, inundações ou picos de energia.;Laudos de manutenção de extintores, no-breaks e ar-condicionado.;3.0;Facilities;Implementado;Relatório em pasta evidência
+7.6;7.Físico;Trabalho em áreas seguras;Regras para ambientes hiper-restritos.;Avisos afixados e controle rigoroso de acesso.;3.0;Facilities;Implementado;Serviço terceirizado - contrato de 8 anos
+7.12;7.Físico;Segurança de cabeamento;Proteger cabos de rede contra cortes ou escutas.;Cabos passando por conduítes fechados e trancados.;3.0;Facilities;Implementado;Eletrocalha
+5.9;5.Organizacional;Inventário de ativos;Identificar e listar todos os ativos e seus donos.;Planilha ou CMDB com lista de ativos, criticidade e proprietários.;0.0;Infraestrutura;Não implementado;Listado hardware em ferramenta, parcialmente documentação de criticidade
+5.1;5.Organizacional;Uso aceitável de ativos;Definir o que colaboradores podem fazer com equipamentos.;Termo de Uso Aceitável assinado pelos colaboradores.;1.5;Infraestrutura;Em andamento;Termo de responsabilidade assinado na contratação
+5.11;5.Organizacional;Devolução de ativos;Garantir que equipamentos e acessos sejam devolvidos no desligamento.;Checklist de offboarding do RH/TI assinado.;0.0;Infraestrutura;Não implementado;Documentação de devolução do equipamento
+5.12;5.Organizacional;Classificação da informação;Classificar os dados em níveis de confidencialidade.;Política de Classificação documentada e dados tagueados.;0.0;Infraestrutura;Não implementado;Validar aplicação de tags
+5.14;5.Organizacional;Transferência de informação;Proteger dados enviados para fora da empresa.;Criptografia em anexos, ferramentas de SFTP aprovadas.;1.5;Infraestrutura;Em andamento;
+5.15;5.Organizacional;Controle de acesso;Estabelecer regras de acesso baseadas no menor privilégio.;Política de Controle de Acesso aprovada.;0.0;Infraestrutura;Não implementado;Infra/web
+5.16;5.Organizacional;Gerenciamento de identidades;Controlar o ciclo de vida das contas.;Logs de criação e bloqueio de usuários no AD/Google Workspace.;0.0;Infraestrutura;Não implementado;Processo sem prazo de exclusão
+5.17;5.Organizacional;Informação de autenticação;Garantir senhas fortes, MFA e proteção de chaves.;Configuração de MFA ativada e política de senhas aplicada.;0.0;Infraestrutura;Não implementado;Matriz de aplicação do SSO
+5.18;5.Organizacional;Direitos de acesso;Revisar periodicamente se acessos ainda são necessários.;Planilha de recertificação de acessos assinada pelos gestores.;0.0;Infraestrutura;Não implementado;Processo precisa ser validado
+5.28;5.Organizacional;Coleta de evidências;Preservar logs de forma legalmente válida.;Procedimento de cadeia de custódia documentado.;0.0;Infraestrutura;Não implementado;Parcialmente implementado
+5.3;5.Organizacional;Prontidão de TIC para continuidade;Garantir que sistemas de TI consigam se recuperar.;Testes de Disaster Recovery realizados com sucesso.;0.0;Infraestrutura;Não implementado;Política de Backup criada. Necessária criação do BIA
+5.32;5.Organizacional;Direitos de propriedade intelectual;Garantir uso de softwares originais e proteger criações.;Relatório de auditoria de licenças de software.;0.0;Infraestrutura;Não implementado;Auditoria possível, em andamento homologação de softwares
+5.33;5.Organizacional;Proteção de registros;Garantir que logs e documentos não sejam apagados antes do prazo legal.;Tabela de temporalidade documental e retenção imutável em logs.;0.0;Infraestrutura;Não implementado;Parcialmente implementado
+5.37;5.Organizacional;Procedimentos operacionais;Documentar passo a passo das rotinas de TI e Segurança.;Manuais de operação (Runbooks) documentados.;0.0;Infraestrutura;Não implementado;Processo em formalização
+6.5;6.Pessoas;Responsabilidades no término;Regras de sigilo que continuam após demissão.;Termo de devolução e manutenção de sigilo no offboarding.;0.0;Infraestrutura;Não implementado;Contrato de contratação - cláusula de confidencialidade
+6.7;6.Pessoas;Trabalho remoto;Controles para proteger dados fora do escritório.;Política de Trabalho Remoto e uso de VPN.;0.0;Infraestrutura;Não implementado;Validar - melhoria após workspace (status: aprovação)
+7.7;7.Físico;Mesa limpa e tela limpa;Não deixar papéis sensíveis na mesa e bloquear tela ao sair.;Bloqueio automático de tela (GPO) configurado para 5-10 minutos.;3.0;Infraestrutura;Implementado;Coleta de evidência
+7.8;Infraestrutura;Localização de equipamentos;Posicionar monitores para que pessoas de fora não vejam dados.;Inspeção visual confirmando posicionamento adequado.;3.0;Infraestrutura;Implementado;Coleta de evidência
+7.9;Infraestrutura;Ativos fora das dependências;Cuidar de notebooks levados para fora da empresa.;Notebooks com criptografia de disco (BitLocker) e rastreamento.;3.0;Infraestrutura;Implementado;Coleta de evidência
+7.1;Infraestrutura;Mídias de armazenamento;Proteger pen drives, HDs externos e documentos físicos.;Proibição técnica (bloqueio de USB) ou cofre para HDs físicos.;1.5;Infraestrutura;Em andamento;Possível via BitDefender, validar necessidade
+7.11;Infraestrutura;Utilitários e suprimentos;Garantir energia, internet e água para operações.;Contratos de redundância de links e geradores testados.;3.0;Infraestrutura;Implementado;Coletar documento de Topologia de Rede
+7.13;Infraestrutura;Manutenção de equipamentos;Manutenção preventiva para evitar que equipamentos percam dados.;Ordem de serviço de manutenção regular de servidores e switches.;3.0;Infraestrutura;Implementado;Validar evidência necessária
+7.14;7.Físico;Descarte seguro;Destruir dados antes de descartar ou doar equipamentos.;Certificado de destruição de HD ou log de wipe.;3.0;Infraestrutura;Implementado;Destruição de HD e SSD, revenda de detritos para causas ambientais
+8.1;8.Tecnológico;Dispositivos de usuário final;Proteger notebooks, celulares e tablets corporativos.;Solução de MDM instalada, antivírus atualizado e firewall local ativo.;3.0;Infraestrutura;Implementado;Antivirus - BitDefender - Coleta de evidência
+8.3;8.Tecnológico;Restrição de acesso a informações;Limitar o acesso apenas ao necessário.;Matrizes RBAC implementadas.;0.0;Infraestrutura;Não implementado;Validar evidência modelo
+8.6;8.Tecnológico;Gestão de capacidade;Monitorar disco, CPU e memória.;Dashboards de monitoramento com alertas de 80%.;3.0;Infraestrutura;Implementado;Coletar evidência
+8.7;8.Tecnológico;Proteção contra malware;Defesas ativas contra vírus, ransomware e spywares.;Console do Antivírus/EDR mostrando 100% dos computadores.;3.0;Infraestrutura;Implementado;Coletar evidência
+8.17;8.Tecnológico;Sincronização de relógios;Todos os servidores com a mesma hora exata.;Servidores configurados apontando para NTP oficial.;3.0;Infraestrutura;Implementado;Coleta de evidência
+8.18;8.Tecnológico;Programas utilitários privilegiados;Controlar ferramentas de sistema que podem burlar controles.;Restrição de execução de PowerShell apenas para administradores.;0.0;Infraestrutura;Não implementado;Associado Matriz RBAC
+8.19;8.Tecnológico;Instalação de software;Impedir que usuários instalem programas por conta própria.;GPO ou MDM bloqueando instalação de executáveis por contas padrão.;3.0;Infraestrutura;Implementado;DATTO - Coletar evidência
+8.2;8.Tecnológico;Segurança em redes;Proteger as conexões entre sistemas e a internet.;Firewall configurado com regras restritivas.;3.0;Infraestrutura;Implementado;Coleta de evidência
+8.21;8.Tecnológico;Segurança de serviços de rede;Garantir que VPN e Wi-Fi sejam seguros e monitorados.;WPA3 no Wi-Fi corporativo e VPN com AD+MFA.;3.0;Infraestrutura;Implementado;Coleta de evidência
+8.22;8.Tecnológico;Segregação de redes;Dividir a rede em partes para limitar propagação de ataques.;VLANs separando rede de Visitantes, Administrativa e de Servidores.;3.0;Infraestrutura;Implementado;Coleta de evidência
+8.23;8.Tecnológico;Filtro de web (Web filtering);Bloquear acesso a sites maliciosos.;Proxy ou DNS Filter bloqueando sites de phishing e malware.;3.0;Infraestrutura;Implementado;Firewall e BitDefender - Coleta de Evidência
+8.24;8.Tecnológico;Uso de criptografia;Embaralhar dados para ficarem ilegíveis se interceptados.;Certificados SSL/TLS válidos em todos os sites e criptografia de disco.;3.0;Infraestrutura;Implementado;BitLocker - Coleta de evidência
+5.13;5.Organizacional;Rótulos da informação;Aplicar marcas visuais conforme classificação.;Documentos com marca d'água de "Confidencial" ou tags no sistema.;0.0;Infraestrutura/ CloudOps;Não implementado;Validar aplicação de tags
+5.24;5.Organizacional;Planejamento de gestão de incidentes;Estabelecer como reagir a um vazamento ou ataque.;Plano de Resposta a Incidentes documentado e testado.;0.0;Infraestrutura/ CloudOps;Não implementado;SI/Infra
+5.25;5.Organizacional;Avaliação de eventos de SI;Triar alertas para definir se é falso positivo ou incidente real.;Logs de ferramentas de monitoramento (SIEM) e tickets de investigação.;1.5;Infraestrutura/ CloudOps;Em andamento;Wazuh SIEM
+5.26;5.Organizacional;Resposta a incidentes;Agir estruturadamente para conter e recuperar de incidente.;Relatório de pós-incidente (Post-mortem) preenchido.;0.0;Infraestrutura/ CloudOps;Não implementado;Validar
+5.27;5.Organizacional;Aprendizado com incidentes;Melhorar defesas com base em incidentes passados.;Atualização de políticas motivadas por incidente anterior.;1.5;Infraestrutura/ CloudOps;Em andamento;Validar
+8.2;8.Tecnológico;Direitos de acesso privilegiado;Controle rigoroso sobre usuários com poder de administrador.;Cofre de senhas (PAM) e aprovação formal.;1.5;Infraestrutura/ CloudOps;Em andamento;em implementação PassBolt
+8.8;8.Tecnológico;Gestão de vulnerabilidades;Descobrir e corrigir falhas de segurança.;Relatório de Scan de Vulnerabilidade e patches.;1.5;Infraestrutura/ CloudOps;Em andamento;Wazuh e BitDefender - Coleta evidência
+8.9;8.Tecnológico;Gestão de configuração;Sistemas com configuração de segurança padrão.;Documento de Baseline de Segurança (Hardening) aprovado.;0.0;Infraestrutura/ CloudOps;Não implementado;Validar
+8.11;8.Tecnológico;Mascaramento de dados;Ocultar informações sensíveis em ambientes de teste.;Telas do sistema mostrando dados mascarados.;0.0;Infraestrutura/ CloudOps;Não implementado;Necessário implementação de DLP
+8.12;8.Tecnológico;Prevenção contra vazamento;Impedir que dados sensíveis saiam da rede sem autorização.;Solução de DLP alertando/bloqueando upload de dados sensíveis.;0.0;Infraestrutura/ CloudOps;Não implementado;Necessário implementação de DLP
+8.15;8.Tecnológico;Geração de registros (Logging);Gravar quem fez o quê, quando, e de onde.;Logs centrais (SIEM) contendo IP, usuário, data, hora e ação.;1.5;Infraestrutura/ CloudOps;Em andamento;Wazuh
+8.16;8.Tecnológico;Atividades de monitoramento;Analisar logs ativamente em busca de anomalias.;Alertas de segurança por acessos simultâneos de países diferentes.;1.5;Infraestrutura/ CloudOps;Em andamento;Implementação do SIEM
+5.5;5.Organizacional;Contato com autoridades;Lista de contatos de órgãos reguladores e polícia.;Plano de resposta a incidentes com lista de contatos.;0.0;Legal;Não implementado;Comunicação com ANPD - Validar lista com órgãos governamentais
+5.2;5.Organizacional;Segurança em acordos com fornecedores;Inserir cláusulas de segurança nos contratos.;Contratos assinados contendo SLA de segurança.;3.0;Legal;Implementado;Coletar evidência (Minuta de contratos)
+5.31;5.Organizacional;Requisitos legais e regulatórios;Mapear e cumprir todas as leis aplicáveis (LGPD, Marco Civil).;Matriz de conformidade legal atualizada e parecer jurídico.;1.5;Legal;Em andamento;Documento de orientação para conformidade legal
+5.34;5.Organizacional;Privacidade e proteção de PII;Proteger dados pessoais conforme a LGPD.;Mapeamento de Dados (RoPA), RIPD e avisos de privacidade atualizados.;0.0;Legal;Não implementado;
+6.3;6.Pessoas;Conscientização e treinamento;Treinar funcionários contra golpes e políticas.;Lista de presença de treinamentos de SI.;1.5;Legal;Em andamento;Em andamento definição da campanha (Deep Security)
+6.6;6.Pessoas;Acordos de confidencialidade;Proteger o vazamento de informações com NDAs.;NDA assinado e armazenado no repositório jurídico.;3.0;Legal;Implementado;Contratos com cláusula de confidencialidade e NDA assinado
+6.8;6.Pessoas;Relato de eventos de SI;Canal fácil para funcionário avisar algo suspeito.;Ticket de chamado aberto por usuário reportando e-mail suspeito.;1.5;Legal;Em andamento;Criação da caixa seguranca@altoqi.com.br
+8.3;8.Tecnológico;Desenvolvimento terceirizado;Fábricas de software com mesmas regras de segurança.;Contrato exigindo práticas seguras.;0.0;Legal;Não implementado;Contrato atual sem exigências de práticas seguras
+5.3;5.Organizacional;Segregação de funções;Separar tarefas críticas para evitar fraudes.;Matriz de acessos mostrando segregação.;1.5;Não definido;Em andamento;Infraestrutura implementa tecnicamente / SI define regras
+5.4;5.Organizacional;Responsabilidades da direção;Alta gestão deve apoiar ativamente a segurança.;Atas de reunião de diretoria com pautas de SI.;0.0;Não definido;Não implementado;Validar Marcos
+5.6;5.Organizacional;Contato com grupos de interesse;Participar de fóruns e grupos de segurança.;Comprovantes de inscrição em grupos.;0.0;Não definido;Não implementado;Participação na ABS e BIM Forum
+5.7;5.Organizacional;Inteligência de ameaças;Coletar informações sobre novas ameaças.;Relatórios de vulnerabilidades e feeds de threat intelligence.;0.0;Não definido;Não implementado;
+5.8;5.Organizacional;SI no gerenciamento de projetos;Integrar requisitos de segurança em novos projetos.;Checklist de segurança na fase de desenho de projetos.;0.0;Não definido;Não implementado;Validar Marcos - arquitetura
+5.19;5.Organizacional;SI nas relações com fornecedores;Avaliar riscos de segurança antes de contratar terceiros.;Questionário de Due Diligence preenchido pelos fornecedores.;0.0;Não definido;Não implementado;Contratação de fornecedor de mkt e facilities
+5.22;5.Organizacional;Monitoramento de fornecedores;Auditar se o fornecedor cumpre a segurança exigida.;Relatórios de auditoria anual ou revisão SOC2.;0.0;Não definido;Não implementado;Passagem de contratos pelo Legal em contratação e renovação
+5.29;5.Organizacional;SI durante interrupções;Segurança não deve ser desligada durante crise.;Teste do PCN mantendo controles ativos.;0.0;Não definido;Não implementado;
+5.35;5.Organizacional;Análise crítica independente;Auditorias internas isentas.;Relatório de Auditoria Interna por área independente.;0.0;Não definido;Não implementado;
+5.36;5.Organizacional;Conformidade com políticas;Gestores devem garantir cumprimento das políticas.;Evidências de verificações gerenciais.;0.0;Não definido;Não implementado;Validar registros de treinamentos e comunicação de políticas
+5.2;5.Organizacional;Papéis e responsabilidades;Documentar quem faz o quê na segurança.;Organograma, Matriz RACI e Job Descriptions atualizados.;1.5;People;Em andamento;Em revisão os Job Description
+6.1;6.Pessoas;Triagem (Background check);Checagem de antecedentes antes de contratar.;Comprovante de validação de currículo e referências pelo RH.;3.0;People;Implementado;Plataforma In Hire para contratação
+6.2;6.Pessoas;Termos de contratação;Responsabilidades de segurança claras no contrato.;Contrato de trabalho contendo cláusulas de segurança.;3.0;People;Implementado;Modelos de contrato adicionados à pasta de evidências
+6.4;6.Pessoas;Processo disciplinar;Regras claras de punição por violação de segurança.;Política disciplinar formalizada e advertências aplicadas pelo RH.;1.5;People;Em andamento;Atualização em andamento no Manual de Ética
+8.1;8.Tecnológico;Exclusão de informações;Apagar dados definitivamente quando não forem mais necessários.;Evidência de rotinas automáticas de expurgo de dados antigos.;0.0;RevOps/ CloudOps;Não implementado;Validar com RevOps`;
+
+// ============================================================
+// PARSE CSV
+// ============================================================
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(';');
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(';');
+    if (parts.length < 2) continue;
+    const row = {};
+    headers.forEach((h, j) => row[h.trim()] = (parts[j] || '').trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ============================================================
+// GLOBAL STATE — populated by initData()
+// ============================================================
+let DATA = [];
+let TOTAL = 0;
+let implemented = 0, inProgress = 0, notImpl = 0, noStatus = 0;
+let pct = 0, avgMat = '0.00';
+const today = new Date();
+const deadline = new Date('2027-03-31');
+const daysLeft = Math.ceil((deadline - today) / 86400000);
+
+// Key accessors
+const getStatus = r => r['Status de Implementação'] || '';
+const getArea   = r => r['Área Responsável'] || 'Não definido';
+const getTopic  = r => r['Tópico'] || '';
+const getMat    = r => parseFloat(r['Maturidade']) || 0;
+const getID     = r => r['ID do Controle'] || '';
+const getDesc   = r => r['Descrição do Controle'] || '';
+const getEv     = r => r['Evidência esperada'] || '';
+const getObs    = r => r['Observações / Histórico'] || '';
+
+function computeStats() {
+  TOTAL       = DATA.length;
+  implemented = DATA.filter(r => getStatus(r) === 'Implementado').length;
+  inProgress  = DATA.filter(r => getStatus(r) === 'Em andamento').length;
+  notImpl     = DATA.filter(r => getStatus(r) === 'Não implementado').length;
+  noStatus    = DATA.filter(r => getStatus(r) === '').length;
+  pct         = Math.round(implemented / TOTAL * 100);
+  avgMat      = (DATA.reduce((s, r) => s + getMat(r), 0) / TOTAL).toFixed(2);
+}
+
+// ============================================================
+// GOOGLE SHEETS FETCH
+// ============================================================
+const SHEET_KEY = 'iso27001_sheet_url';
+
+function sheetUrlToExportUrl(input) {
+  input = input.trim();
+  // Already a pub?output=csv link
+  if (input.includes('pub?output=csv') || input.includes('pub?gid=')) return input;
+  // /export?format=csv link
+  if (input.includes('/export?format=csv')) return input;
+  // Regular spreadsheet URL — extract ID and convert
+  const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) {
+    const gidMatch = input.match(/[#&?]gid=([0-9]+)/);
+    const gid = gidMatch ? gidMatch[1] : '0';
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gid}`;
+  }
+  return null;
+}
+
+function disconnectSheet() {
+  localStorage.removeItem(SHEET_KEY);
+  document.getElementById('sheetUrlInput').value = '';
+  document.getElementById('disconnectBtn').style.display = 'none';
+  setConfigStatus('ok', '✓ Desconectado · Usando dados locais embutidos');
+  DATA = parseCSV(RAW_CSV);
+  computeStats();
+  document.getElementById('lastUpdate').textContent = 'Dados locais · ' + today.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  rebuildDashboard();
+}
+
+async function loadFromSheet(silent = false) {
+  const input = document.getElementById('sheetUrlInput').value.trim();
+  if (!input) { setConfigStatus('err', '⚠ Cole a URL da planilha primeiro.'); return; }
+
+  const url = sheetUrlToExportUrl(input);
+  if (!url) { setConfigStatus('err', '✗ URL inválida. Use o link do Google Sheets.'); return; }
+
+  setConfigStatus('loading', '↻ Buscando dados…');
+  document.getElementById('loadSheetBtn').disabled = true;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (text.trim().length < 10) throw new Error('Planilha vazia ou sem permissão.');
+
+    // Detect separator: ; or ,
+    const sep = text.split('\n')[0].includes(';') ? ';' : ',';
+    const parsed = parseCSVWithSep(text, sep);
+    if (parsed.length === 0) throw new Error('Nenhuma linha válida encontrada.');
+
+    DATA = parsed;
+    computeStats();
+    localStorage.setItem(SHEET_KEY, input);
+    document.getElementById('disconnectBtn').style.display = '';
+    setConfigStatus('ok', `✓ ${DATA.length} registros carregados · ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`);
+    document.getElementById('lastUpdate').textContent = 'Google Sheets · ' + new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    rebuildDashboard();
+  } catch(e) {
+    setConfigStatus('err', '✗ Erro: ' + e.message);
+    if (!silent) console.error(e);
+  } finally {
+    document.getElementById('loadSheetBtn').disabled = false;
+  }
+}
+
+function setConfigStatus(type, msg) {
+  const el = document.getElementById('configStatus');
+  el.className = 'config-status ' + type;
+  el.innerHTML = (type === 'loading' ? '<span class="spinner"></span> ' : '') + msg;
+}
+
+function showSheetHelp() {
+  const m = document.getElementById('helpModal');
+  m.style.display = 'flex';
+}
+
+// CSV parser with configurable separator
+function parseCSVWithSep(text, sep) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(sep);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(sep);
+    if (parts.length < 2) continue;
+    const row = {};
+    headers.forEach((h, j) => row[h.trim().replace(/^"|"$/g, '')] = (parts[j] || '').trim().replace(/^"|"$/g, ''));
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ============================================================
+// REBUILD — destroys old charts and reinits everything
+// ============================================================
+let chartInstances = {};
+
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  chartInstances = {};
+}
+
+function rebuildDashboard() {
+  destroyCharts();
+  initHeader();
+  initKPIs();
+  chartInstances.burnup = initBurnup();
+  initAlerts();
+  initTopicBars();
+  initHeatmap();
+  chartInstances.donut = initDonut();
+  initFilters();
+  hideLoading();
+}
+
+function hideLoading() {
+  const ov = document.getElementById('loadingOverlay');
+  ov.classList.add('hidden');
+  setTimeout(() => ov.style.display = 'none', 400);
+}
+
+function showLoading(text, sub) {
+  const ov = document.getElementById('loadingOverlay');
+  ov.style.display = 'flex';
+  ov.classList.remove('hidden');
+  document.getElementById('loadingText').textContent = text || 'Carregando dados…';
+  document.getElementById('loadingSubText').textContent = sub || '';
+}
+
+// ============================================================
+// INIT UI
+// ============================================================
+function initHeader() {
+  document.getElementById('daysLeft').textContent = daysLeft + ' dias restantes';
+  document.getElementById('lastUpdate').textContent = 'Atualizado: ' + today.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+function initKPIs() {
+  document.getElementById('kpiProgress').textContent = pct + '%';
+  document.getElementById('kpiImp').textContent = implemented;
+  document.getElementById('kpiTotal').textContent = TOTAL;
+  document.getElementById('kpiProgressBar').style.width = pct + '%';
+  document.getElementById('kpiMaturity').textContent = avgMat;
+  document.getElementById('kpiMatBar').style.width = (parseFloat(avgMat)/3*100) + '%';
+  document.getElementById('kpiDays').textContent = daysLeft;
+  document.getElementById('kpiNotImpl').textContent = notImpl;
+  document.getElementById('kpiInProgress').textContent = inProgress;
+  document.getElementById('kpiNoStatus').textContent = noStatus;
+}
+
+// ============================================================
+// BURNUP CHART
+// ============================================================
+function initBurnup() {
+  const ctx = document.getElementById('burnupChart').getContext('2d');
+
+  // Months from Jan 2026 to Mar 2027
+  const start = new Date('2026-01-01');
+  const end = new Date('2027-03-31');
+  const months = [];
+  const labels = [];
+  let d = new Date(start);
+  while (d <= end) {
+    months.push(new Date(d));
+    labels.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
+    d.setMonth(d.getMonth() + 1);
+  }
+
+  // Scope line: constant
+  const scopeData = months.map(() => TOTAL);
+
+  // Ideal velocity: linear from 0 at Jan 2026 to TOTAL at Mar 2027
+  const idealData = months.map((m, i) => Math.round(TOTAL * i / (months.length - 1)));
+
+  // Actual: null until current month, then current value
+  const currentIdx = months.findIndex(m =>
+    m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth()
+  );
+  const actualData = months.map((_, i) => i <= currentIdx ? (i === currentIdx ? implemented : null) : null);
+  // fill prior months with a ramp (estimate)
+  for (let i = 0; i <= currentIdx; i++) {
+    actualData[i] = Math.round(implemented * (i / currentIdx));
+  }
+  actualData[currentIdx] = implemented;
+
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Escopo Total',
+          data: scopeData,
+          borderColor: 'rgba(148,163,184,.4)',
+          backgroundColor: 'transparent',
+          borderDash: [6, 3],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0
+        },
+        {
+          label: 'Projeção Ideal',
+          data: idealData,
+          borderColor: 'rgba(59,130,246,.35)',
+          backgroundColor: 'rgba(59,130,246,.04)',
+          borderDash: [4, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        },
+        {
+          label: 'Implementados',
+          data: actualData,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,.08)',
+          borderWidth: 2.5,
+          pointRadius: months.map((_, i) => i === currentIdx ? 6 : 0),
+          pointBackgroundColor: '#10b981',
+          pointBorderColor: '#0b0f1a',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2236',
+          borderColor: '#1e2d4a',
+          borderWidth: 1,
+          titleColor: '#e2e8f0',
+          bodyColor: '#8fa3c0',
+          padding: 12,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          }
+        },
+        annotation: {}
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30,45,74,.5)', lineWidth: 1 },
+          ticks: { color: '#4d6482', font: { family: 'JetBrains Mono', size: 10 } }
+        },
+        y: {
+          min: 0,
+          max: TOTAL + 10,
+          grid: { color: 'rgba(30,45,74,.5)', lineWidth: 1 },
+          ticks: {
+            color: '#4d6482',
+            font: { family: 'JetBrains Mono', size: 10 },
+            stepSize: 20
+          }
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+// RISK ALERTS
+// ============================================================
+function initAlerts() {
+  // Group critical risks: Não implementado with mat=0
+  const risks = [];
+
+  // Critical: Não implementado + maturidade 0 in key areas
+  const criticalAreas = ['CloudOps', 'Infraestrutura', 'Infraestrutura/ CloudOps', 'Legal'];
+  const critItems = DATA.filter(r =>
+    getStatus(r) === 'Não implementado' &&
+    getMat(r) === 0 &&
+    criticalAreas.includes(getArea(r))
+  );
+
+  // Group by description
+  const critByDesc = {};
+  critItems.forEach(r => {
+    const k = getDesc(r);
+    if (!critByDesc[k]) critByDesc[k] = { areas: new Set(), count: 0, ev: getEv(r) };
+    critByDesc[k].areas.add(getArea(r));
+    critByDesc[k].count++;
+  });
+
+  // Top critical
+  const critKeys = Object.keys(critByDesc).slice(0, 4);
+  critKeys.forEach(k => {
+    risks.push({
+      level: 'critical',
+      title: k,
+      desc: critByDesc[k].ev.substring(0, 100) + (critByDesc[k].ev.length > 100 ? '…' : ''),
+      areas: [...critByDesc[k].areas],
+      tag: 'Não implementado · Mat. 0'
+    });
+  });
+
+  // Medium: Em andamento with no evidence progress
+  const medItems = DATA.filter(r =>
+    getStatus(r) === 'Em andamento' &&
+    getMat(r) === 0
+  ).slice(0, 3);
+  const medByDesc = {};
+  medItems.forEach(r => {
+    const k = getDesc(r);
+    if (!medByDesc[k]) medByDesc[k] = { area: getArea(r), ev: getEv(r) };
+  });
+  Object.keys(medByDesc).slice(0, 2).forEach(k => {
+    risks.push({
+      level: 'medium',
+      title: k,
+      desc: 'Em andamento sem maturidade consolidada — risco de atraso.',
+      areas: [medByDesc[k].area],
+      tag: 'Em andamento · Mat. 0'
+    });
+  });
+
+  // Structural risk: DLP not implemented
+  risks.push({
+    level: 'critical',
+    title: 'DLP (Prevenção de Vazamento) não implementado',
+    desc: 'Mascaramento de dados e prevenção contra vazamento ainda pendentes. Auditoria exige evidência de DLP operacional.',
+    areas: ['Infraestrutura/ CloudOps'],
+    tag: 'Bloqueador crítico'
+  });
+
+  // Risk: no formal incident response plan
+  risks.push({
+    level: 'critical',
+    title: 'Plano de Resposta a Incidentes inexistente',
+    desc: 'Controles 5.24, 5.26 não implementados. Sem plano formal, a certificação ISO 27001 está em risco direto.',
+    areas: ['CloudOps', 'Não definido'],
+    tag: 'Cláusula obrigatória'
+  });
+
+  document.getElementById('alertCount').textContent = risks.length + ' alertas';
+
+  const list = document.getElementById('riskList');
+  list.innerHTML = risks.map(r => `
+    <div class="risk-item ${r.level}">
+      <div class="risk-title">${r.title}</div>
+      <div class="risk-desc">${r.desc}</div>
+      <div class="risk-meta">
+        <span class="tag ${r.level === 'critical' ? 'tag-red' : r.level === 'medium' ? 'tag-yellow' : 'tag-blue'}">${r.tag}</span>
+        ${r.areas.map(a => `<span class="tag tag-blue">${a}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// TOPIC BARS
+// ============================================================
+function initTopicBars() {
+  const topics = [...new Set(DATA.map(r => getTopic(r)))].sort();
+  const container = document.getElementById('topicBars');
+
+  const rows = topics.map(t => {
+    const sub = DATA.filter(r => getTopic(r) === t);
+    const imp = sub.filter(r => getStatus(r) === 'Implementado').length;
+    const pct = Math.round(imp / sub.length * 100);
+    const color = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    return { t, pct, imp, total: sub.length, color };
+  });
+
+  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+    ${rows.map(r => `
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--text);font-weight:500;">${r.t || 'Sem tópico'}</span>
+          <span style="font-family:var(--mono);font-size:12px;color:${r.color};font-weight:700;">${r.pct}%</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;border-radius:3px;background:${r.color};width:${r.pct}%;transition:width 1.2s ease;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono);">${r.imp} / ${r.total} controles</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+// ============================================================
+// HEATMAP
+// ============================================================
+function initHeatmap() {
+  const areas = [...new Set(DATA.map(r => getArea(r)))].sort();
+  const statuses = ['Implementado', 'Em andamento', 'Não implementado', 'Sem status'];
+  const table = document.getElementById('heatmapTable');
+
+  const getCounts = (area) => {
+    const sub = DATA.filter(r => getArea(r) === area);
+    return {
+      'Implementado': sub.filter(r => getStatus(r) === 'Implementado').length,
+      'Em andamento': sub.filter(r => getStatus(r) === 'Em andamento').length,
+      'Não implementado': sub.filter(r => getStatus(r) === 'Não implementado').length,
+      'Sem status': sub.filter(r => getStatus(r) === '').length,
+      total: sub.length
+    };
+  };
+
+  const colorClass = (status, count, total) => {
+    if (count === 0) return 'hmap-0';
+    if (status === 'Implementado') return 'hmap-green';
+    if (status === 'Em andamento') return 'hmap-yellow';
+    if (status === 'Não implementado') return 'hmap-red';
+    return 'hmap-gray';
+  };
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Área Responsável</th>
+        <th>✅ Implementado</th>
+        <th>🟡 Em andamento</th>
+        <th>🔴 Não implementado</th>
+        <th>⚪ Sem status</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${areas.map(area => {
+        const c = getCounts(area);
+        const maxRisk = Math.max(c['Não implementado'], c['Em andamento']);
+        const impPct = Math.round(c['Implementado'] / c.total * 100);
+        return `
+          <tr>
+            <td title="${area}">${area.length > 22 ? area.substring(0,22)+'…' : area}</td>
+            <td><div class="hmap-cell ${colorClass('Implementado', c['Implementado'], c.total)}">${c['Implementado'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Em andamento', c['Em andamento'], c.total)}">${c['Em andamento'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Não implementado', c['Não implementado'], c.total)}">${c['Não implementado'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Sem status', c['Sem status'], c.total)}">${c['Sem status'] || '—'}</div></td>
+            <td>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--text2);">${c.total}</div>
+              <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
+                <div style="height:100%;border-radius:2px;background:var(--green);width:${impPct}%;"></div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  `;
+}
+
+// ============================================================
+// DONUT CHART
+// ============================================================
+function initDonut() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  document.getElementById('donutCenter').textContent = TOTAL;
+
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Implementado', 'Em andamento', 'Não implementado', 'Sem status'],
+      datasets: [{
+        data: [implemented, inProgress, notImpl, noStatus],
+        backgroundColor: ['rgba(16,185,129,.85)', 'rgba(245,158,11,.85)', 'rgba(239,68,68,.85)', 'rgba(100,116,139,.4)'],
+        borderColor: '#111827',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      cutout: '68%',
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2236',
+          borderColor: '#1e2d4a',
+          borderWidth: 1,
+          titleColor: '#e2e8f0',
+          bodyColor: '#8fa3c0',
+          padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/TOTAL*100)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  const items = [
+    { label: 'Implementado', count: implemented, cls: 'tag-green', color: 'var(--green)' },
+    { label: 'Em andamento', count: inProgress, cls: 'tag-yellow', color: 'var(--yellow)' },
+    { label: 'Não implementado', count: notImpl, cls: 'tag-red', color: 'var(--red)' },
+    { label: 'Sem status', count: noStatus, cls: 'tag-blue', color: 'var(--text3)' }
+  ];
+
+  document.getElementById('donutLegend').innerHTML = items.map(item => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${item.color};"></div>
+        <span style="font-size:12px;color:var(--text2);">${item.label}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${item.color};">${item.count}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">${Math.round(item.count/TOTAL*100)}%</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// FILTER BUTTONS
+// ============================================================
+const activeFilters = { area: 'all', status: 'all', topic: 'all' };
+let currentPage = 1;
+const PAGE_SIZE = 12;
+let filteredData = [];
+let sortKey = 'status';
+let sortDir = 1;
+
+function initFilters() {
+  const areas = ['all', ...new Set(DATA.map(r => getArea(r)))].sort();
+  const statuses = ['all', 'Não implementado', 'Em andamento', 'Implementado', ''];
+  const topics = ['all', ...new Set(DATA.map(r => getTopic(r)))].sort();
+
+  const makeBtn = (val, label, group) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (val === 'all' ? ' active' : '');
+    btn.textContent = val === 'all' ? 'Todos' : (val === '' ? 'Sem status' : label);
+    btn.dataset.val = val;
+    btn.onclick = () => {
+      document.querySelectorAll(`#filter${group} .filter-btn`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilters[group.toLowerCase()] = val;
+      currentPage = 1;
+      applyFilters();
+    };
+    return btn;
+  };
+
+  const areaEl = document.getElementById('filterArea');
+  areas.forEach(a => areaEl.appendChild(makeBtn(a, a, 'Area')));
+
+  const statusEl = document.getElementById('filterStatus');
+  statuses.forEach(s => statusEl.appendChild(makeBtn(s, s, 'Status')));
+
+  const topicEl = document.getElementById('filterTopic');
+  topics.forEach(t => topicEl.appendChild(makeBtn(t, t, 'Topic')));
+
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  filteredData = DATA.filter(r => {
+    const aOk = activeFilters.area === 'all' || getArea(r) === activeFilters.area;
+    const sOk = activeFilters.status === 'all' || getStatus(r) === activeFilters.status;
+    const tOk = activeFilters.topic === 'all' || getTopic(r) === activeFilters.topic;
+    const qOk = !search || getDesc(r).toLowerCase().includes(search) || getID(r).toLowerCase().includes(search) || getArea(r).toLowerCase().includes(search) || getObs(r).toLowerCase().includes(search);
+    return aOk && sOk && tOk && qOk;
+  });
+
+  // Sort
+  filteredData.sort((a, b) => {
+    let va, vb;
+    if (sortKey === 'id') { va = getID(a); vb = getID(b); }
+    else if (sortKey === 'topic') { va = getTopic(a); vb = getTopic(b); }
+    else if (sortKey === 'desc') { va = getDesc(a); vb = getDesc(b); }
+    else if (sortKey === 'area') { va = getArea(a); vb = getArea(b); }
+    else if (sortKey === 'status') {
+      const order = {'Não implementado':0,'':1,'Em andamento':2,'Implementado':3};
+      va = order[getStatus(a)] ?? 99; vb = order[getStatus(b)] ?? 99;
+      return (va - vb) * sortDir;
+    }
+    else if (sortKey === 'mat') { va = getMat(a); vb = getMat(b); return (va - vb) * sortDir; }
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+
+  renderTable();
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  applyFilters();
+}
+
+function renderTable() {
+  const total = filteredData.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > pages) currentPage = pages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = filteredData.slice(start, start + PAGE_SIZE);
+
+  const statusPill = s => {
+    if (s === 'Implementado') return `<span class="status-pill pill-green">✓ Implementado</span>`;
+    if (s === 'Em andamento') return `<span class="status-pill pill-yellow">⟳ Em andamento</span>`;
+    if (s === 'Não implementado') return `<span class="status-pill pill-red">✗ Não implementado</span>`;
+    return `<span class="status-pill pill-gray">— Sem status</span>`;
+  };
+
+  const matDot = v => {
+    const cl = v === 0 ? 'mat-0' : v <= 1 ? 'mat-1' : v <= 2 ? 'mat-2' : 'mat-3';
+    return `<span class="mat-dot ${cl}">${v}</span>`;
+  };
+
+  const trunc = (s, n) => s.length > n ? s.substring(0, n) + '…' : s;
+
+  const tbody = document.getElementById('actionTableBody');
+  tbody.innerHTML = slice.map(r => `
+    <tr>
+      <td>${getID(r)}</td>
+      <td><span style="font-size:11px;color:var(--text3);">${getTopic(r) || '—'}</span></td>
+      <td style="color:var(--text);font-size:12px;max-width:180px;">${trunc(getDesc(r), 45)}</td>
+      <td><span style="font-size:11px;color:var(--text2);font-family:var(--mono);">${trunc(getArea(r), 20)}</span></td>
+      <td>${statusPill(getStatus(r))}</td>
+      <td style="text-align:center;">${matDot(getMat(r))}</td>
+      <td><span class="ev-text" title="${getEv(r)}">${trunc(getEv(r), 55)}</span></td>
+      <td><span class="obs-text" title="${getObs(r)}">${trunc(getObs(r), 45) || '—'}</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('tableCount').textContent = total + ' itens';
+  document.getElementById('tableFooterCount').textContent = `Exibindo ${start + 1}–${Math.min(start + PAGE_SIZE, total)} de ${total} registros`;
+  document.getElementById('pageInfo').textContent = `${currentPage} / ${pages}`;
+  document.getElementById('btnPrev').disabled = currentPage <= 1;
+  document.getElementById('btnNext').disabled = currentPage >= pages;
+}
+
+function changePage(dir) {
+  const pages = Math.ceil(filteredData.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(pages, currentPage + dir));
+  renderTable();
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  showLoading('Iniciando dashboard…', 'AltoQi · ISO 27001');
+
+  // Check if there's a saved sheet URL
+  const savedUrl = localStorage.getItem(SHEET_KEY);
+  if (savedUrl) {
+    document.getElementById('sheetUrlInput').value = savedUrl;
+    document.getElementById('disconnectBtn').style.display = '';
+    showLoading('Buscando dados do Google Sheets…', savedUrl.substring(0, 60) + '…');
+    try {
+      await loadFromSheet(true);
+      return; // rebuildDashboard already called inside loadFromSheet
+    } catch(e) {
+      // fall through to embedded data
+    }
+  }
+
+  // Fallback: use embedded CSV
+  DATA = parseCSV(RAW_CSV);
+  computeStats();
+  document.getElementById('lastUpdate').textContent = 'Dados locais · ' + today.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  setConfigStatus('ok', '✓ Dados locais carregados · Conecte o Google Sheets para atualização automática');
+  rebuildDashboard();
+});
+</script>
+</body>
+</html>
