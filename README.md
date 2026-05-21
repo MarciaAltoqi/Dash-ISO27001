@@ -7,8 +7,7 @@ Meta de certificação: **março de 2027**.
 
 ## 🚀 Acesso rápido
 
-> 🔗 **[Abrir dashboard](https://seu-usuario.github.io/iso27001-altoqi)**  
-> *(substitua pelo link real após ativar o GitHub Pages)*
+> [🔗 https://marciaaltoqi.github.io/Dash-ISO27001/ ]
 
 ---
 
@@ -56,26 +55,6 @@ Os dados podem ser mantidos de duas formas:
 5. O link fica salvo no navegador — nas próximas aberturas o dashboard atualiza automaticamente
 
 > ⚠️ A planilha precisa estar com acesso **"Qualquer pessoa com o link pode ver"**.
-
-### Opção 2 — Atualização manual do arquivo
-
-1. Exporte a planilha atualizada como `.csv` (separador `;`)
-2. Acesse [claude.ai](https://claude.ai), suba o CSV e peça:  
-   *"Atualize o dashboard com os novos dados"*
-3. Baixe o novo `index.html` gerado
-4. Faça o upload no repositório substituindo o arquivo anterior
-
----
-
-## 📁 Estrutura do repositório
-
-```
-iso27001-altoqi/
-│
-├── index.html       # Dashboard completo (HTML + CSS + JS em um único arquivo)
-└── README.md        # Este arquivo
-```
-
 ---
 
 ## 🗂️ Estrutura da planilha de dados
@@ -109,7 +88,6 @@ A planilha deve conter obrigatoriamente as seguintes colunas, separadas por `;`:
 | `Implementado` | 🟢 Verde |
 | `Em andamento` | 🟡 Amarelo |
 | `Não implementado` | 🔴 Vermelho |
-| *(vazio)* | ⚪ Cinza — sem status definido |
 
 ---
 
