@@ -1008,12 +1008,16 @@ function disconnectSheet() {
   rebuildDashboard();
 }
 
+let isLoading = false;
+
 async function loadFromSheet(silent = false) {
+  if (isLoading) return;
+  isLoading = true;
   const input = document.getElementById('sheetUrlInput').value.trim();
-  if (!input) { setConfigStatus('err', '⚠ Cole a URL da planilha primeiro.'); return; }
+  if (!input) { setConfigStatus('err', '⚠ Cole a URL da planilha primeiro.'); isLoading = false; return; }
 
   const url = sheetUrlToExportUrl(input);
-  if (!url) { setConfigStatus('err', '✗ URL inválida. Use o link do Google Sheets.'); return; }
+  if (!url) { setConfigStatus('err', '✗ URL inválida. Use o link do Google Sheets.'); isLoading = false; return; }
 
   setConfigStatus('loading', '↻ Buscando dados…');
   document.getElementById('loadSheetBtn').disabled = true;
@@ -1043,6 +1047,7 @@ async function loadFromSheet(silent = false) {
     if (!silent) console.error(e);
   } finally {
     document.getElementById('loadSheetBtn').disabled = false;
+    isLoading = false;
   }
 }
 
@@ -1569,46 +1574,43 @@ let sortKey = 'status';
 let sortDir = 1;
 
 function initFilters() {
-  // Reset active filters and clear all containers before repopulating
   activeFilters.area   = 'all';
   activeFilters.status = 'all';
   activeFilters.topic  = 'all';
-
-  ['filterArea', 'filterStatus', 'filterTopic'].forEach(id => {
-    document.getElementById(id).innerHTML = '';
-  });
   document.getElementById('searchInput').value = '';
 
-  // Valid topic prefixes — ignore garbage from multiline cells
-  const validTopics = new Set(
-    DATA.map(r => getTopic(r))
-        .map(t => t.split('\n')[0].trim())   // take only first line
-        .filter(t => t.length > 0 && /^[\d]|^Infra/i.test(t)) // must start with digit or "Infra"
-  );
+  // Valid topics: first-line only, must start with digit or "Infra"
+  const validTopics = [...new Set(
+    DATA.map(r => getTopic(r)).filter(t => t.length > 0 && /^[\d]|^Infra/i.test(t))
+  )].sort();
 
-  const areas   = ['all', ...new Set(DATA.map(r => getArea(r).split('\n')[0].trim()))].sort();
-  const statuses = ['all', 'Não implementado', 'Em andamento', 'Implementado', ''];
-  const topics  = ['all', ...[...validTopics].sort()];
+  const areas   = [...new Set(DATA.map(r => getArea(r)))].sort();
+  const statuses = ['Não implementado', 'Em andamento', 'Implementado', ''];
 
-  const makeBtn = (val, label, group) => {
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn' + (val === 'all' ? ' active' : '');
-    btn.textContent = val === 'all' ? 'Todos' : (val === '' ? 'Sem status' : label);
-    btn.dataset.val = val;
-    btn.onclick = () => {
-      document.querySelectorAll(`#filter${group} .filter-btn`).forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilters[group.toLowerCase()] = val;
-      currentPage = 1;
-      applyFilters();
-    };
-    return btn;
-  };
+  const btn = (val, label, group) =>
+    `<button class="filter-btn${val === 'all' ? ' active' : ''}"
+      data-val="${val}" data-group="${group}"
+      onclick="setFilter('${group}','${val.replace(/'/g,"\\'")}',this)">
+      ${val === 'all' ? 'Todos' : val === '' ? 'Sem status' : label}
+    </button>`;
 
-  document.getElementById('filterArea').append(  ...areas.map(a => makeBtn(a, a, 'Area')));
-  document.getElementById('filterStatus').append(...statuses.map(s => makeBtn(s, s, 'Status')));
-  document.getElementById('filterTopic').append( ...topics.map(t => makeBtn(t, t, 'Topic')));
+  document.getElementById('filterArea').innerHTML =
+    btn('all','','Area') + areas.map(a => btn(a, a, 'Area')).join('');
 
+  document.getElementById('filterStatus').innerHTML =
+    btn('all','','Status') + statuses.map(s => btn(s, s, 'Status')).join('');
+
+  document.getElementById('filterTopic').innerHTML =
+    btn('all','','Topic') + validTopics.map(t => btn(t, t, 'Topic')).join('');
+
+  applyFilters();
+}
+
+function setFilter(group, val, el) {
+  document.querySelectorAll(`#filter${group} .filter-btn`).forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  activeFilters[group.toLowerCase()] = val;
+  currentPage = 1;
   applyFilters();
 }
 
