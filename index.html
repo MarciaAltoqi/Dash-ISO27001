@@ -957,14 +957,14 @@ const deadline = new Date('2027-03-31');
 const daysLeft = Math.ceil((deadline - today) / 86400000);
 
 // Key accessors
-const getStatus = r => r['Status de Implementação'] || '';
-const getArea   = r => r['Área Responsável'] || 'Não definido';
-const getTopic  = r => r['Tópico'] || '';
+const getStatus = r => (r['Status de Implementação'] || '').split('\n')[0].trim();
+const getArea   = r => (r['Área Responsável'] || 'Não definido').split('\n')[0].trim() || 'Não definido';
+const getTopic  = r => (r['Tópico'] || '').split('\n')[0].trim();
 const getMat    = r => parseFloat(r['Maturidade']) || 0;
-const getID     = r => r['ID do Controle'] || '';
-const getDesc   = r => r['Descrição do Controle'] || '';
-const getEv     = r => r['Evidência esperada'] || '';
-const getObs    = r => r['Observações / Histórico'] || '';
+const getID     = r => (r['ID do Controle'] || '').split('\n')[0].trim();
+const getDesc   = r => (r['Descrição do Controle'] || '').split('\n')[0].trim();
+const getEv     = r => (r['Evidência esperada'] || '').split('\n')[0].trim();
+const getObs    = r => (r['Observações / Histórico'] || '').split('\n')[0].trim();
 
 function computeStats() {
   TOTAL       = DATA.length;
@@ -1569,9 +1569,26 @@ let sortKey = 'status';
 let sortDir = 1;
 
 function initFilters() {
-  const areas = ['all', ...new Set(DATA.map(r => getArea(r)))].sort();
+  // Reset active filters and clear all containers before repopulating
+  activeFilters.area   = 'all';
+  activeFilters.status = 'all';
+  activeFilters.topic  = 'all';
+
+  ['filterArea', 'filterStatus', 'filterTopic'].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+  document.getElementById('searchInput').value = '';
+
+  // Valid topic prefixes — ignore garbage from multiline cells
+  const validTopics = new Set(
+    DATA.map(r => getTopic(r))
+        .map(t => t.split('\n')[0].trim())   // take only first line
+        .filter(t => t.length > 0 && /^[\d]|^Infra/i.test(t)) // must start with digit or "Infra"
+  );
+
+  const areas   = ['all', ...new Set(DATA.map(r => getArea(r).split('\n')[0].trim()))].sort();
   const statuses = ['all', 'Não implementado', 'Em andamento', 'Implementado', ''];
-  const topics = ['all', ...new Set(DATA.map(r => getTopic(r)))].sort();
+  const topics  = ['all', ...[...validTopics].sort()];
 
   const makeBtn = (val, label, group) => {
     const btn = document.createElement('button');
@@ -1588,14 +1605,9 @@ function initFilters() {
     return btn;
   };
 
-  const areaEl = document.getElementById('filterArea');
-  areas.forEach(a => areaEl.appendChild(makeBtn(a, a, 'Area')));
-
-  const statusEl = document.getElementById('filterStatus');
-  statuses.forEach(s => statusEl.appendChild(makeBtn(s, s, 'Status')));
-
-  const topicEl = document.getElementById('filterTopic');
-  topics.forEach(t => topicEl.appendChild(makeBtn(t, t, 'Topic')));
+  document.getElementById('filterArea').append(  ...areas.map(a => makeBtn(a, a, 'Area')));
+  document.getElementById('filterStatus').append(...statuses.map(s => makeBtn(s, s, 'Status')));
+  document.getElementById('filterTopic').append( ...topics.map(t => makeBtn(t, t, 'Topic')));
 
   applyFilters();
 }
