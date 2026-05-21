@@ -696,7 +696,10 @@ body {
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title"><span class="panel-title-dot" style="background:var(--yellow)"></span> Mapa de Calor · Área × Status</div>
-        <div class="panel-tag">Gargalos identificados</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="panel-tag" id="heatmapFilterTag" style="display:none;background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.3);">filtro ativo</div>
+          <div class="panel-tag">Gargalos identificados</div>
+        </div>
       </div>
       <div class="panel-body" style="padding:0;">
         <div style="overflow-x:auto;">
@@ -1375,26 +1378,32 @@ function initTopicBars() {
 // ============================================================
 // HEATMAP
 // ============================================================
-function initHeatmap() {
-  const areas = [...new Set(DATA.map(r => getArea(r)))].sort();
-  const statuses = ['Implementado', 'Em andamento', 'Não implementado', 'Sem status'];
+function initHeatmap() { renderHeatmap(DATA); }
+
+function renderHeatmap(source) {
+  const areas = [...new Set(source.map(r => getArea(r)))].sort();
   const table = document.getElementById('heatmapTable');
 
+  if (areas.length === 0) {
+    table.innerHTML = `<tbody><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);font-family:var(--mono);font-size:12px;">Nenhum resultado para os filtros selecionados</td></tr></tbody>`;
+    return;
+  }
+
   const getCounts = (area) => {
-    const sub = DATA.filter(r => getArea(r) === area);
+    const sub = source.filter(r => getArea(r) === area);
     return {
-      'Implementado': sub.filter(r => getStatus(r) === 'Implementado').length,
-      'Em andamento': sub.filter(r => getStatus(r) === 'Em andamento').length,
-      'Não implementado': sub.filter(r => getStatus(r) === 'Não implementado').length,
-      'Sem status': sub.filter(r => getStatus(r) === '').length,
+      'Implementado':      sub.filter(r => getStatus(r) === 'Implementado').length,
+      'Em andamento':      sub.filter(r => getStatus(r) === 'Em andamento').length,
+      'Não implementado':  sub.filter(r => getStatus(r) === 'Não implementado').length,
+      'Sem status':        sub.filter(r => getStatus(r) === '').length,
       total: sub.length
     };
   };
 
-  const colorClass = (status, count, total) => {
+  const colorClass = (status, count) => {
     if (count === 0) return 'hmap-0';
-    if (status === 'Implementado') return 'hmap-green';
-    if (status === 'Em andamento') return 'hmap-yellow';
+    if (status === 'Implementado')     return 'hmap-green';
+    if (status === 'Em andamento')     return 'hmap-yellow';
     if (status === 'Não implementado') return 'hmap-red';
     return 'hmap-gray';
   };
@@ -1413,19 +1422,18 @@ function initHeatmap() {
     <tbody>
       ${areas.map(area => {
         const c = getCounts(area);
-        const maxRisk = Math.max(c['Não implementado'], c['Em andamento']);
-        const impPct = Math.round(c['Implementado'] / c.total * 100);
+        const impPct = c.total > 0 ? Math.round(c['Implementado'] / c.total * 100) : 0;
         return `
           <tr>
             <td title="${area}">${area.length > 22 ? area.substring(0,22)+'…' : area}</td>
-            <td><div class="hmap-cell ${colorClass('Implementado', c['Implementado'], c.total)}">${c['Implementado'] || '—'}</div></td>
-            <td><div class="hmap-cell ${colorClass('Em andamento', c['Em andamento'], c.total)}">${c['Em andamento'] || '—'}</div></td>
-            <td><div class="hmap-cell ${colorClass('Não implementado', c['Não implementado'], c.total)}">${c['Não implementado'] || '—'}</div></td>
-            <td><div class="hmap-cell ${colorClass('Sem status', c['Sem status'], c.total)}">${c['Sem status'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Implementado', c['Implementado'])}">${c['Implementado'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Em andamento', c['Em andamento'])}">${c['Em andamento'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Não implementado', c['Não implementado'])}">${c['Não implementado'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Sem status', c['Sem status'])}">${c['Sem status'] || '—'}</div></td>
             <td>
               <div style="font-family:var(--mono);font-size:11px;color:var(--text2);">${c.total}</div>
               <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
-                <div style="height:100%;border-radius:2px;background:var(--green);width:${impPct}%;"></div>
+                <div style="height:100%;border-radius:2px;background:var(--green);width:${impPct}%;transition:width .4s ease;"></div>
               </div>
             </td>
           </tr>
@@ -1440,9 +1448,9 @@ function initHeatmap() {
 // ============================================================
 function initDonut() {
   const ctx = document.getElementById('donutChart').getContext('2d');
-  document.getElementById('donutCenter').textContent = TOTAL;
+  document.getElementById('donutCenter').textContent = DATA.length;
 
-  return new Chart(ctx, {
+  const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels: ['Implementado', 'Em andamento', 'Não implementado', 'Sem status'],
@@ -1468,20 +1476,43 @@ function initDonut() {
           bodyColor: '#8fa3c0',
           padding: 10,
           callbacks: {
-            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/TOTAL*100)}%)`
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed / TOTAL * 100)}%)`
           }
         }
       }
     }
   });
 
-  const items = [
-    { label: 'Implementado', count: implemented, cls: 'tag-green', color: 'var(--green)' },
-    { label: 'Em andamento', count: inProgress, cls: 'tag-yellow', color: 'var(--yellow)' },
-    { label: 'Não implementado', count: notImpl, cls: 'tag-red', color: 'var(--red)' },
-    { label: 'Sem status', count: noStatus, cls: 'tag-blue', color: 'var(--text3)' }
-  ];
+  renderDonutLegend(implemented, inProgress, notImpl, noStatus, TOTAL);
+  return chart;
+}
 
+function renderDonut(source) {
+  const imp  = source.filter(r => getStatus(r) === 'Implementado').length;
+  const prog = source.filter(r => getStatus(r) === 'Em andamento').length;
+  const no   = source.filter(r => getStatus(r) === 'Não implementado').length;
+  const ns   = source.filter(r => getStatus(r) === '').length;
+  const tot  = source.length;
+
+  document.getElementById('donutCenter').textContent = tot;
+
+  const chart = chartInstances.donut;
+  if (chart) {
+    chart.data.datasets[0].data = [imp, prog, no, ns];
+    chart.options.plugins.tooltip.callbacks.label =
+      ctx => ` ${ctx.label}: ${ctx.parsed} (${tot > 0 ? Math.round(ctx.parsed / tot * 100) : 0}%)`;
+    chart.update('active');
+  }
+  renderDonutLegend(imp, prog, no, ns, tot);
+}
+
+function renderDonutLegend(imp, prog, no, ns, tot) {
+  const items = [
+    { label: 'Implementado',     count: imp,  color: 'var(--green)' },
+    { label: 'Em andamento',     count: prog, color: 'var(--yellow)' },
+    { label: 'Não implementado', count: no,   color: 'var(--red)' },
+    { label: 'Sem status',       count: ns,   color: 'var(--text3)' }
+  ];
   document.getElementById('donutLegend').innerHTML = items.map(item => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -1490,7 +1521,7 @@ function initDonut() {
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${item.color};">${item.count}</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">${Math.round(item.count/TOTAL*100)}%</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">${tot > 0 ? Math.round(item.count/tot*100) : 0}%</span>
       </div>
     </div>
   `).join('');
@@ -1564,6 +1595,15 @@ function applyFilters() {
     return va < vb ? -sortDir : va > vb ? sortDir : 0;
   });
 
+  // Update all three components with the filtered dataset
+  const isFiltered = activeFilters.area !== 'all' || activeFilters.status !== 'all' || activeFilters.topic !== 'all' || document.getElementById('searchInput').value.trim() !== '';
+  const badge = document.getElementById('heatmapFilterTag');
+  if (badge) {
+    badge.style.display = isFiltered ? '' : 'none';
+    badge.textContent = isFiltered ? `${filteredData.length} de ${DATA.length} itens` : '';
+  }
+  renderHeatmap(filteredData);
+  renderDonut(filteredData);
   renderTable();
 }
 
