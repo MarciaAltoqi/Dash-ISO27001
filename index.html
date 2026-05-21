@@ -943,19 +943,7 @@ const RAW_CSV = `ID do Controle;Tópico;Descrição do Controle;Detalhes;Evidên
 // ============================================================
 // PARSE CSV
 // ============================================================
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(';');
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i].split(';');
-    if (parts.length < 2) continue;
-    const row = {};
-    headers.forEach((h, j) => row[h.trim()] = (parts[j] || '').trim());
-    rows.push(row);
-  }
-  return rows;
-}
+function parseCSV(text) { return parseCSVWithSep(text, ';'); }
 
 // ============================================================
 // GLOBAL STATE — populated by initData()
@@ -1036,8 +1024,10 @@ async function loadFromSheet(silent = false) {
     const text = await res.text();
     if (text.trim().length < 10) throw new Error('Planilha vazia ou sem permissão.');
 
-    // Detect separator: ; or ,
-    const sep = text.split('\n')[0].includes(';') ? ';' : ',';
+    const firstLine = text.split('\n')[0];
+    const semicolons = (firstLine.match(/;/g) || []).length;
+    const commas    = (firstLine.match(/,/g) || []).length;
+    const sep = semicolons >= commas ? ';' : ',';
     const parsed = parseCSVWithSep(text, sep);
     if (parsed.length === 0) throw new Error('Nenhuma linha válida encontrada.');
 
@@ -1067,16 +1057,57 @@ function showSheetHelp() {
   m.style.display = 'flex';
 }
 
-// CSV parser with configurable separator
+// CSV parser with configurable separator — RFC 4180 compliant (handles quoted fields)
 function parseCSVWithSep(text, sep) {
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(sep);
+  // Normalize line endings
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  function parseRow(line, delimiter) {
+    const fields = [];
+    let i = 0;
+    while (i <= line.length) {
+      if (line[i] === '"') {
+        // Quoted field
+        let val = '';
+        i++; // skip opening quote
+        while (i < line.length) {
+          if (line[i] === '"' && line[i + 1] === '"') {
+            val += '"'; i += 2; // escaped quote
+          } else if (line[i] === '"') {
+            i++; break; // closing quote
+          } else {
+            val += line[i++];
+          }
+        }
+        fields.push(val.trim());
+        if (line[i] === delimiter) i++; // skip delimiter after closing quote
+      } else {
+        // Unquoted field
+        const end = line.indexOf(delimiter, i);
+        if (end === -1) {
+          fields.push(line.slice(i).trim());
+          break;
+        } else {
+          fields.push(line.slice(i, end).trim());
+          i = end + 1;
+        }
+      }
+    }
+    return fields;
+  }
+
+  const allLines = lines.split('\n').filter(l => l.trim().length > 0);
+  if (allLines.length < 2) return [];
+
+  const headers = parseRow(allLines[0], sep);
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i].split(sep);
+  for (let i = 1; i < allLines.length; i++) {
+    const parts = parseRow(allLines[i], sep);
     if (parts.length < 2) continue;
     const row = {};
-    headers.forEach((h, j) => row[h.trim().replace(/^"|"$/g, '')] = (parts[j] || '').trim().replace(/^"|"$/g, ''));
+    headers.forEach((h, j) => {
+      row[h.replace(/^\uFEFF/, '').trim()] = (parts[j] || '').trim();
+    });
     rows.push(row);
   }
   return rows;
