@@ -630,7 +630,7 @@ body {
     <div class="kpi-card yellow">
       <div class="kpi-label">Não Implementados</div>
       <div class="kpi-value yellow" id="kpiNotImpl">—</div>
-      <div class="kpi-sub"><strong id="kpiInProgress">—</strong> em andamento · <strong id="kpiNoStatus">—</strong> sem status</div>
+      <div class="kpi-sub"><strong id="kpiInProgress">—</strong> em andamento</div>
     </div>
   </div>
 
@@ -1459,7 +1459,13 @@ function initAlerts() {
 // TOPIC BARS
 // ============================================================
 function initTopicBars() {
-  const topics = [...new Set(DATA.map(r => getTopic(r)))].sort();
+  // Filtra apenas tópicos válidos: começam com dígito (ex: 5.Organizacional)
+  const VALID_TOPIC = /^\d+\./;
+  const topics = [...new Set(
+    DATA.map(r => getTopic(r))
+        .filter(t => t && VALID_TOPIC.test(t.trim()))
+  )].sort();
+
   const container = document.getElementById('topicBars');
 
   const rows = topics.map(t => {
@@ -1474,7 +1480,7 @@ function initTopicBars() {
     ${rows.map(r => `
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-size:12px;color:var(--text);font-weight:500;">${r.t || 'Sem tópico'}</span>
+          <span style="font-size:12px;color:var(--text);font-weight:500;">${r.t}</span>
           <span style="font-family:var(--mono);font-size:12px;color:${r.color};font-weight:700;">${r.pct}%</span>
         </div>
         <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
