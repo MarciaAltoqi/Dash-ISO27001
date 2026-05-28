@@ -949,15 +949,65 @@ function parseCSV(text) { return parseCSVWithSep(text, ';'); }
 // GLOBAL STATE — populated by initData()
 // ============================================================
 let DATA = [];
-let TOTAL = 0;
+let TOTAL = 0, naItems = 0;
 let implemented = 0, inProgress = 0, notImpl = 0, noStatus = 0;
 let pct = 0, avgMat = '0.00';
-const today = new Date();
+const today    = new Date();
 const deadline = new Date('2027-03-31');
-const daysLeft = Math.ceil((deadline - today) / 86400000);
+
+// ── Feriados nacionais brasileiros fixos e móveis até março/2027 ─────────────
+function buildHolidays() {
+  const fixed = [];
+  // Feriados fixos (mês é 0-indexed)
+  const fixedDates = [
+    [1,1],[4,2],[21,4],[1,5],[7,9],[12,10],[2,11],[15,11],[20,11],[25,12]
+  ];
+  for (let year = today.getFullYear(); year <= 2027; year++) {
+    fixedDates.forEach(([d, m]) => fixed.push(`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`));
+  }
+  // Páscoa (algoritmo de Meeus/Jones/Butcher) e feriados móveis
+  function easter(y) {
+    const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,
+          f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
+          h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,
+          l=(32+2*e+2*i-h-k)%7,m2=Math.floor((a+11*h+22*l)/451),
+          month=Math.floor((h+l-7*m2+114)/31),day=((h+l-7*m2+114)%31)+1;
+    return new Date(y, month-1, day);
+  }
+  for (let year = today.getFullYear(); year <= 2027; year++) {
+    const e = easter(year);
+    // Sexta-feira Santa (-2), Carnaval (-47 e -48), Corpus Christi (+60)
+    [[-48],[-47],[-2],[60]].forEach(([offset]) => {
+      const d2 = new Date(e); d2.setDate(d2.getDate() + offset);
+      fixed.push(d2.toISOString().slice(0,10));
+    });
+  }
+  return new Set(fixed);
+}
+
+function countBusinessDays(from, to) {
+  const holidays = buildHolidays();
+  let count = 0;
+  const cur = new Date(from);
+  cur.setHours(0,0,0,0);
+  const end = new Date(to);
+  end.setHours(0,0,0,0);
+  while (cur < end) {
+    cur.setDate(cur.getDate() + 1);
+    const dow = cur.getDay();
+    const iso = cur.toISOString().slice(0,10);
+    if (dow !== 0 && dow !== 6 && !holidays.has(iso)) count++;
+  }
+  return count;
+}
+
+const daysLeft = countBusinessDays(today, deadline);
 
 // Key accessors
-const getStatus = r => (r['Status de Implementação'] || '').split('\n')[0].trim();
+const getStatus = r => {
+  const s = (r['Status de Implementação'] || '').split('\n')[0].trim();
+  return (s === '' || s === 'N/A' || s === 'n/a' || s === 'NA') ? 'Não se aplica' : s;
+};
 const getArea   = r => (r['Área Responsável'] || 'Não definido').split('\n')[0].trim() || 'Não definido';
 const getTopic  = r => (r['Tópico'] || '').split('\n')[0].trim();
 const getMat    = r => parseFloat(r['Maturidade']) || 0;
@@ -967,13 +1017,17 @@ const getEv     = r => (r['Evidência esperada'] || '').split('\n')[0].trim();
 const getObs    = r => (r['Observações / Histórico'] || '').split('\n')[0].trim();
 
 function computeStats() {
-  TOTAL       = DATA.length;
+  naItems     = DATA.filter(r => getStatus(r) === 'Não se aplica').length;
+  TOTAL       = DATA.length - naItems;  // total efetivo — exclui "Não se aplica"
   implemented = DATA.filter(r => getStatus(r) === 'Implementado').length;
   inProgress  = DATA.filter(r => getStatus(r) === 'Em andamento').length;
   notImpl     = DATA.filter(r => getStatus(r) === 'Não implementado').length;
-  noStatus    = DATA.filter(r => getStatus(r) === '').length;
-  pct         = Math.round(implemented / TOTAL * 100);
-  avgMat      = (DATA.reduce((s, r) => s + getMat(r), 0) / TOTAL).toFixed(2);
+  noStatus    = naItems;  // mantém compatibilidade com refs antigas
+  pct         = DATA.length > 0 ? Math.round(implemented / DATA.length * 100) : 0;
+  const activeData = DATA.filter(r => getStatus(r) !== 'Não se aplica');
+  avgMat      = activeData.length > 0
+    ? (activeData.reduce((s, r) => s + getMat(r), 0) / activeData.length).toFixed(2)
+    : '0.00';
 }
 
 // ============================================================
@@ -1180,21 +1234,21 @@ function showLoading(text, sub) {
 // INIT UI
 // ============================================================
 function initHeader() {
-  document.getElementById('daysLeft').textContent = daysLeft + ' dias restantes';
+  document.getElementById('daysLeft').textContent = daysLeft + ' dias úteis restantes';
   document.getElementById('lastUpdate').textContent = 'Atualizado: ' + today.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
 function initKPIs() {
   document.getElementById('kpiProgress').textContent = pct + '%';
   document.getElementById('kpiImp').textContent = implemented;
-  document.getElementById('kpiTotal').textContent = TOTAL;
+  document.getElementById('kpiTotal').textContent = DATA.length;  // total real incluindo Não se aplica
   document.getElementById('kpiProgressBar').style.width = pct + '%';
   document.getElementById('kpiMaturity').textContent = avgMat;
   document.getElementById('kpiMatBar').style.width = (parseFloat(avgMat)/3*100) + '%';
   document.getElementById('kpiDays').textContent = daysLeft;
   document.getElementById('kpiNotImpl').textContent = notImpl;
   document.getElementById('kpiInProgress').textContent = inProgress;
-  document.getElementById('kpiNoStatus').textContent = noStatus;
+  document.getElementById('kpiNoStatus').textContent = naItems;
 }
 
 // ============================================================
@@ -1448,12 +1502,13 @@ function renderHeatmap(source) {
 
   const getCounts = (area) => {
     const sub = source.filter(r => getArea(r) === area);
+    const active = sub.filter(r => getStatus(r) !== 'Não se aplica');
     return {
       'Implementado':      sub.filter(r => getStatus(r) === 'Implementado').length,
       'Em andamento':      sub.filter(r => getStatus(r) === 'Em andamento').length,
       'Não implementado':  sub.filter(r => getStatus(r) === 'Não implementado').length,
-      'Sem status':        sub.filter(r => getStatus(r) === '').length,
-      total: sub.length
+      'Não se aplica':     sub.filter(r => getStatus(r) === 'Não se aplica').length,
+      total: active.length  // total efetivo exclui N/A
     };
   };
 
@@ -1472,7 +1527,7 @@ function renderHeatmap(source) {
         <th>✅ Implementado</th>
         <th>🟡 Em andamento</th>
         <th>🔴 Não implementado</th>
-        <th>⚪ Sem status</th>
+        <th>⚪ Não se aplica</th>
         <th>Total</th>
       </tr>
     </thead>
@@ -1486,7 +1541,7 @@ function renderHeatmap(source) {
             <td><div class="hmap-cell ${colorClass('Implementado', c['Implementado'])}">${c['Implementado'] || '—'}</div></td>
             <td><div class="hmap-cell ${colorClass('Em andamento', c['Em andamento'])}">${c['Em andamento'] || '—'}</div></td>
             <td><div class="hmap-cell ${colorClass('Não implementado', c['Não implementado'])}">${c['Não implementado'] || '—'}</div></td>
-            <td><div class="hmap-cell ${colorClass('Sem status', c['Sem status'])}">${c['Sem status'] || '—'}</div></td>
+            <td><div class="hmap-cell ${colorClass('Não se aplica', c['Não se aplica'])}">${c['Não se aplica'] || '—'}</div></td>
             <td>
               <div style="font-family:var(--mono);font-size:11px;color:var(--text2);">${c.total}</div>
               <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
@@ -1510,7 +1565,7 @@ function initDonut() {
   const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Implementado', 'Em andamento', 'Não implementado', 'Sem status'],
+      labels: ['Implementado', 'Em andamento', 'Não implementado', 'Não se aplica'],
       datasets: [{
         data: [implemented, inProgress, notImpl, noStatus],
         backgroundColor: ['rgba(16,185,129,.85)', 'rgba(245,158,11,.85)', 'rgba(239,68,68,.85)', 'rgba(100,116,139,.4)'],
@@ -1548,8 +1603,8 @@ function renderDonut(source) {
   const imp  = source.filter(r => getStatus(r) === 'Implementado').length;
   const prog = source.filter(r => getStatus(r) === 'Em andamento').length;
   const no   = source.filter(r => getStatus(r) === 'Não implementado').length;
-  const ns   = source.filter(r => getStatus(r) === '').length;
-  const tot  = source.length;
+  const ns   = source.filter(r => getStatus(r) === 'Não se aplica').length;
+  const tot  = source.filter(r => getStatus(r) !== 'Não se aplica').length;
 
   document.getElementById('donutCenter').textContent = tot;
 
@@ -1568,7 +1623,7 @@ function renderDonutLegend(imp, prog, no, ns, tot) {
     { label: 'Implementado',     count: imp,  color: 'var(--green)' },
     { label: 'Em andamento',     count: prog, color: 'var(--yellow)' },
     { label: 'Não implementado', count: no,   color: 'var(--red)' },
-    { label: 'Sem status',       count: ns,   color: 'var(--text3)' }
+    { label: 'Não se aplica',    count: ns,   color: 'var(--text3)' }
   ];
   document.getElementById('donutLegend').innerHTML = items.map(item => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);">
@@ -1606,13 +1661,13 @@ function initFilters() {
   )].sort();
 
   const areas   = [...new Set(DATA.map(r => getArea(r)))].sort();
-  const statuses = ['Não implementado', 'Em andamento', 'Implementado', ''];
+  const statuses = ['Não implementado', 'Em andamento', 'Implementado', 'Não se aplica'];
 
   const btn = (val, label, group) =>
     `<button class="filter-btn${val === 'all' ? ' active' : ''}"
       data-val="${val}" data-group="${group}"
       onclick="setFilter('${group}','${val.replace(/'/g,"\\'")}',this)">
-      ${val === 'all' ? 'Todos' : val === '' ? 'Sem status' : label}
+      ${val === 'all' ? 'Todos' : val === 'Não se aplica' ? 'Não se aplica' : label}
     </button>`;
 
   document.getElementById('filterArea').innerHTML =
@@ -1662,11 +1717,13 @@ function applyFilters() {
   });
 
   // Update all three components with the filtered dataset
+  const effectiveFiltered = filteredData.filter(r => getStatus(r) !== 'Não se aplica').length;
+  const effectiveTotal    = DATA.filter(r => getStatus(r) !== 'Não se aplica').length;
   const isFiltered = activeFilters.area !== 'all' || activeFilters.status !== 'all' || activeFilters.topic !== 'all' || document.getElementById('searchInput').value.trim() !== '';
   const badge = document.getElementById('heatmapFilterTag');
   if (badge) {
     badge.style.display = isFiltered ? '' : 'none';
-    badge.textContent = isFiltered ? `${filteredData.length} de ${DATA.length} itens` : '';
+    badge.textContent = isFiltered ? `${effectiveFiltered} de ${effectiveTotal} itens` : '';
   }
   renderHeatmap(filteredData);
   renderDonut(filteredData);
@@ -1690,7 +1747,7 @@ function renderTable() {
     if (s === 'Implementado') return `<span class="status-pill pill-green">✓ Implementado</span>`;
     if (s === 'Em andamento') return `<span class="status-pill pill-yellow">⟳ Em andamento</span>`;
     if (s === 'Não implementado') return `<span class="status-pill pill-red">✗ Não implementado</span>`;
-    return `<span class="status-pill pill-gray">— Sem status</span>`;
+    return `<span class="status-pill pill-gray">— Não se aplica</span>`;
   };
 
   const matDot = v => {
