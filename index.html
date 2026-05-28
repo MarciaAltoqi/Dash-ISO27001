@@ -505,7 +505,9 @@ body {
   align-items: center; justify-content: center;
   gap: 20px;
   transition: opacity .4s;
+  animation: autoHide 0s 3s forwards; /* fallback: some after 3s if JS fails */
 }
+@keyframes autoHide { to { opacity: 0; pointer-events: none; display: none; } }
 .loading-overlay.hidden { opacity: 0; pointer-events: none; }
 .loading-logo {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
@@ -1194,22 +1196,28 @@ function destroyCharts() {
 }
 
 function rebuildDashboard() {
-  destroyCharts();
-  initHeader();
-  initKPIs();
-  chartInstances.burnup = initBurnup();
-  initAlerts();
-  initTopicBars();
-  initHeatmap();
-  chartInstances.donut = initDonut();
-  initFilters();
+  // Esconde o overlay IMEDIATAMENTE — garante que nunca fica preso
   hideLoading();
+  try {
+    destroyCharts();
+    initHeader();
+    initKPIs();
+    chartInstances.burnup = initBurnup();
+    initAlerts();
+    initTopicBars();
+    initHeatmap();
+    chartInstances.donut = initDonut();
+    initFilters();
+  } catch(e) {
+    console.error('Erro ao inicializar dashboard:', e);
+  }
 }
 
 function hideLoading() {
   const ov = document.getElementById('loadingOverlay');
+  if (!ov) return;
   ov.classList.add('hidden');
-  setTimeout(() => ov.style.display = 'none', 400);
+  setTimeout(() => { ov.style.display = 'none'; }, 400);
 }
 
 function showLoading(text, sub) {
@@ -1809,7 +1817,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('disconnectBtn').style.display = '';
   }
 
-  rebuildDashboard();
+  rebuildDashboard(); // já chama hideLoading() internamente
 });
 </script>
 </body>
