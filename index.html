@@ -1196,21 +1196,17 @@ function destroyCharts() {
 }
 
 function rebuildDashboard() {
-  // Esconde o overlay IMEDIATAMENTE — garante que nunca fica preso
-  hideLoading();
-  try {
-    destroyCharts();
-    initHeader();
-    initKPIs();
-    chartInstances.burnup = initBurnup();
-    initAlerts();
-    initTopicBars();
-    initHeatmap();
-    chartInstances.donut = initDonut();
-    initFilters();
-  } catch(e) {
-    console.error('Erro ao inicializar dashboard:', e);
-  }
+  hideLoading(); // sempre primeiro — nunca fica preso
+  destroyCharts();
+  const run = (name, fn) => { try { fn(); } catch(e) { console.warn(`[dashboard] ${name}:`, e); } };
+  run('initHeader',    initHeader);
+  run('initKPIs',      initKPIs);
+  run('initBurnup',    () => { chartInstances.burnup = initBurnup(); });
+  run('initAlerts',    initAlerts);
+  run('initTopicBars', initTopicBars);
+  run('initHeatmap',   initHeatmap);
+  run('initDonut',     () => { chartInstances.donut = initDonut(); });
+  run('initFilters',   initFilters);
 }
 
 function hideLoading() {
