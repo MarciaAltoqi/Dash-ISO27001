@@ -1066,21 +1066,26 @@ let isLoading = false;
 
 // CORS proxies — tentados em ordem se o anterior falhar
 const CORS_PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => url   // tentativa direta como último recurso
+  { name: 'corsproxy.io',    fn: url => `https://corsproxy.io/?${encodeURIComponent(url)}` },
+  { name: 'allorigins.win',  fn: url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+  { name: 'acesso direto',   fn: url => url },
 ];
 
 async function fetchWithCorsProxy(url) {
   let lastError;
-  for (const proxyFn of CORS_PROXIES) {
+  for (const { name, fn } of CORS_PROXIES) {
+    setConfigStatus('loading', `↻ Tentando via ${name}…`);
     try {
-      const proxied = proxyFn(url);
-      const res = await fetch(proxied, { signal: AbortSignal.timeout(10000) });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 7000); // 7s por proxy
+      const res = await fetch(fn(url), { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) return res;
-      lastError = new Error(`HTTP ${res.status}`);
+      lastError = new Error(`HTTP ${res.status} via ${name}`);
     } catch(e) {
-      lastError = e;
+      lastError = e.name === 'AbortError'
+        ? new Error(`Timeout via ${name} — tentando próximo…`)
+        : e;
     }
   }
   throw lastError;
