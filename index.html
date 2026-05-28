@@ -1037,6 +1037,8 @@ const SHEET_KEY = 'iso27001_sheet_url';
 
 function sheetUrlToExportUrl(input) {
   input = input.trim();
+  // Apps Script URL — usar direto
+  if (input.includes('script.google.com/macros')) return input;
   // Already a pub?output=csv link
   if (input.includes('pub?output=csv') || input.includes('pub?gid=')) return input;
   // /export?format=csv link
@@ -1064,31 +1066,56 @@ function disconnectSheet() {
 
 let isLoading = false;
 
-// CORS proxies — tentados em ordem se o anterior falhar
-const CORS_PROXIES = [
-  { name: 'corsproxy.io',    fn: url => `https://corsproxy.io/?${encodeURIComponent(url)}` },
-  { name: 'allorigins.win',  fn: url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-  { name: 'acesso direto',   fn: url => url },
-];
+// ── URL helpers ──────────────────────────────────────────────────────────────
+function isAppsScriptUrl(url) {
+  return url.includes('script.google.com/macros');
+}
 
-async function fetchWithCorsProxy(url) {
+async function fetchSheetData(url) {
+  // Apps Script URL — sem CORS, resposta direta em JSON
+  if (isAppsScriptUrl(url)) {
+    setConfigStatus('loading', '↻ Buscando via Apps Script…');
+    const res = await fetchWithTimeout(url, 12000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!Array.isArray(json)) throw new Error('Resposta inválida do Apps Script');
+    return { type: 'json', data: json };
+  }
+
+  // Google Sheets CSV — tenta proxies em sequência
+  const proxies = [
+    { name: 'corsproxy.io',   fn: u => `https://corsproxy.io/?${encodeURIComponent(u)}` },
+    { name: 'allorigins.win', fn: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  ];
+
   let lastError;
-  for (const { name, fn } of CORS_PROXIES) {
-    setConfigStatus('loading', `↻ Tentando via ${name}…`);
+  for (const { name, fn } of proxies) {
+    setConfigStatus('loading', `↻ Conectando via ${name}…`);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 7000); // 7s por proxy
-      const res = await fetch(fn(url), { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) return res;
+      const res = await fetchWithTimeout(fn(url), 8000);
+      if (res.ok) {
+        const text = await res.text();
+        if (text.trim().length > 10) return { type: 'csv', data: text };
+      }
       lastError = new Error(`HTTP ${res.status} via ${name}`);
     } catch(e) {
-      lastError = e.name === 'AbortError'
-        ? new Error(`Timeout via ${name} — tentando próximo…`)
-        : e;
+      lastError = e.name === 'AbortError' ? new Error(`Timeout (${name})`) : e;
     }
   }
-  throw lastError;
+  throw lastError || new Error('Todos os proxies falharam. Use o Apps Script para conexão estável.');
+}
+
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 async function loadFromSheet(silent = false) {
@@ -1104,31 +1131,41 @@ async function loadFromSheet(silent = false) {
   document.getElementById('loadSheetBtn').disabled = true;
 
   try {
-    const res = await fetchWithCorsProxy(url);
-    const text = await res.text();
-    if (text.trim().length < 10) throw new Error('Planilha vazia ou sem permissão.');
+    const result = await fetchSheetData(url);
+    let parsed = [];
 
-    const firstLine = text.split('\n')[0];
-    const semicolons = (firstLine.match(/;/g) || []).length;
-    const commas    = (firstLine.match(/,/g) || []).length;
-    const sep = semicolons >= commas ? ';' : ',';
-    const parsed = parseCSVWithSep(text, sep);
+    if (result.type === 'json') {
+      // Apps Script returns array of objects directly
+      parsed = result.data;
+    } else {
+      // CSV from proxy
+      const text = result.data;
+      const firstLine = text.split('\n')[0];
+      const semicolons = (firstLine.match(/;/g) || []).length;
+      const commas    = (firstLine.match(/,/g) || []).length;
+      const sep = semicolons >= commas ? ';' : ',';
+      parsed = parseCSVWithSep(text, sep);
+    }
+
     if (parsed.length === 0) throw new Error('Nenhuma linha válida encontrada.');
 
     DATA = parsed;
     computeStats();
     localStorage.setItem(SHEET_KEY, input);
     document.getElementById('disconnectBtn').style.display = '';
+    const src = isAppsScriptUrl(url) ? 'Apps Script' : 'Google Sheets';
     setConfigStatus('ok', `✓ ${DATA.length} registros carregados · ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`);
-    document.getElementById('lastUpdate').textContent = 'Google Sheets · ' + new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastUpdate').textContent = `${src} · ` + new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     rebuildDashboard();
   } catch(e) {
     setConfigStatus('err', '✗ Erro: ' + e.message);
     if (!silent) console.error(e);
+    return false;  // sinaliza falha para o boot
   } finally {
     document.getElementById('loadSheetBtn').disabled = false;
     isLoading = false;
   }
+  return true;  // sinaliza sucesso
 }
 
 function setConfigStatus(type, msg) {
@@ -1811,25 +1848,27 @@ function switchTab(id, btn) {
 window.addEventListener('DOMContentLoaded', async () => {
   showLoading('Iniciando dashboard…', 'AltoQi · ISO 27001');
 
-  // Check if there's a saved sheet URL
   const savedUrl = localStorage.getItem(SHEET_KEY);
   if (savedUrl) {
     document.getElementById('sheetUrlInput').value = savedUrl;
     document.getElementById('disconnectBtn').style.display = '';
-    showLoading('Buscando dados do Google Sheets…', savedUrl.substring(0, 60) + '…');
-    try {
-      await loadFromSheet(true);
-      return; // rebuildDashboard already called inside loadFromSheet
-    } catch(e) {
-      // fall through to embedded data
-    }
+    showLoading('Buscando dados do Google Sheets…', savedUrl.substring(0, 55) + '…');
+
+    // Timeout global de 20s — garante que nunca fica preso
+    const bootTimeout = new Promise(resolve => setTimeout(() => resolve(false), 20000));
+    const success = await Promise.race([loadFromSheet(true), bootTimeout]);
+
+    if (success) return;  // loadFromSheet já chamou rebuildDashboard
+
+    // Falhou ou timeout — avisa e carrega dados locais
+    setConfigStatus('err', '⚠ Não foi possível carregar o Google Sheets. Exibindo dados locais.');
   }
 
-  // Fallback: use embedded CSV
+  // Fallback: dados embutidos no HTML
   DATA = parseCSV(RAW_CSV);
   computeStats();
   document.getElementById('lastUpdate').textContent = 'Dados locais · ' + today.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
-  setConfigStatus('ok', '✓ Dados locais carregados · Conecte o Google Sheets para atualização automática');
+  if (!savedUrl) setConfigStatus('ok', '✓ Dados locais · Conecte o Google Sheets para atualização automática');
   rebuildDashboard();
 });
 </script>
