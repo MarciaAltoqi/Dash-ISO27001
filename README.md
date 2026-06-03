@@ -8,6 +8,7 @@ Meta de certificação: **março de 2027**.
 ## 🚀 Acesso rápido
 
 > [🔗 https://marciaaltoqi.github.io/Dash-ISO27001/ ]
+> [https://marciaaltoqi.github.io/Dash-ISO27001/ISO27001-GAPS.html] Gerenciamento de Gaps
 
 ---
 
